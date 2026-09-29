@@ -3,10 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="SoundRip mengonversi file video atau audio menjadi MP3 secara lokal di browser Anda.">
-<meta name="theme-color" content="#080a0f">
-<meta name="color-scheme" content="dark">
-<title>SoundRip — Konverter Video ke MP3 Offline</title>
+<title>SoundRip — Video to MP3 (Offline)</title>
 <style>
   :root {
     --bg: #080a0f;
@@ -105,7 +102,6 @@
     border-color: var(--accent);
     box-shadow: var(--glow), inset 0 0 40px rgba(0,245,196,0.03);
   }
-  .drop-zone[aria-disabled="true"] { cursor: wait; opacity: 0.7; }
   .drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
   .drop-icon {
     width: 64px; height: 64px;
@@ -127,6 +123,46 @@
     background: rgba(255,255,255,0.02);
   }
   input[type="file"] { display: none; }
+
+  /* ── MODE TOGGLE ── */
+  .mode-select {
+    display: flex; gap: 0; margin-top: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 4px; overflow: hidden;
+  }
+  .mode-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 16px; border: none; border-radius: 7px;
+    background: transparent; color: var(--muted);
+    font-family: 'Courier New', monospace; font-size: 12px; font-weight: 600;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.25s;
+  }
+  .mode-btn.active {
+    background: rgba(0,245,196,0.12); color: var(--accent);
+    box-shadow: inset 0 0 0 1px rgba(0,245,196,0.25);
+  }
+  .mode-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+
+  /* ── GPU BADGE ── */
+  .gpu-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; margin-top: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 11px; color: var(--muted);
+    transition: all 0.3s;
+  }
+  .gpu-badge.gpu-nvidia { border-color: rgba(118,185,0,0.35); color: #76b900; background: rgba(118,185,0,0.06); }
+  .gpu-badge.gpu-amd    { border-color: rgba(237,28,36,0.35); color: #ed1c24; background: rgba(237,28,36,0.06); }
+  .gpu-badge.gpu-webgpu { border-color: rgba(123,97,255,0.4); color: var(--accent3); background: rgba(123,97,255,0.07); }
+  .gpu-badge.gpu-integrated { border-color: rgba(0,245,196,0.2); color: var(--accent); background: rgba(0,245,196,0.05); }
+  .gpu-badge.gpu-cpu    { border-color: var(--border); color: var(--muted); }
+  .gpu-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+    flex-shrink: 0; animation: pulse 2s infinite;
+  }
+  .gpu-threads { margin-left: auto; font-size: 10px; opacity: 0.7; }
+
+  /* ── FILE INFO ── */
   .file-info {
     display: none;
     background: var(--surface);
@@ -151,9 +187,8 @@
     padding: 6px; border-radius: 6px; transition: all 0.2s; display: flex;
   }
   .file-remove:hover { color: var(--accent2); background: rgba(255,77,109,0.1); }
-  button:focus-visible, .drop-zone:focus-visible, select:focus-visible, a:focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 3px;
-  }
+
+  /* ── SETTINGS ── */
   .settings {
     display: none; background: var(--surface);
     border: 1px solid var(--border); border-radius: 12px;
@@ -172,6 +207,8 @@
   }
   .setting-control select:focus { border-color: var(--accent); }
   .setting-control select option { background: #0e1219; }
+
+  /* ── WAVEFORM + PROGRESS ── */
   .waveform-container {
     display: none; margin-top: 16px; background: var(--surface);
     border: 1px solid var(--border); border-radius: 12px;
@@ -183,18 +220,72 @@
     margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
   }
   .waveform-status { color: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   canvas#waveform { width: 100%; height: 80px; display: block; border-radius: 4px; }
-  .progress-wrap { margin-top: 12px; }
-  .progress-bar-bg { width: 100%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+
+  /* Overall (batch) progress */
+  .progress-overall {
+    display: none; margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(123,97,255,0.06);
+    border: 1px solid rgba(123,97,255,0.2);
+    border-radius: 8px;
+  }
+  .progress-overall.visible { display: block; }
+  .progress-overall-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--accent3); letter-spacing: 1px; margin-bottom: 8px;
+  }
+  .progress-overall-bar-bg {
+    width: 100%; height: 5px; background: rgba(123,97,255,0.15);
+    border-radius: 3px; overflow: hidden;
+  }
+  .progress-overall-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent3), #a78bfa);
+    border-radius: 3px; width: 0%;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(123,97,255,0.5);
+  }
+
+  /* Per-file progress */
+  .progress-wrap { margin-top: 14px; }
+  .progress-bar-bg { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
   .progress-bar-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--accent3), var(--accent));
-    border-radius: 2px; width: 0%; transition: width 0.3s ease;
+    border-radius: 2px; width: 0%;
+    transition: width 0.15s linear;
     box-shadow: 0 0 10px rgba(0,245,196,0.5);
   }
   .progress-text { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--muted); }
-  .progress-pct { color: var(--accent); font-weight: 500; }
+  .progress-pct { color: var(--accent); font-weight: 600; }
+  .progress-eta { font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; }
+
+  /* ── FILE QUEUE (batch) ── */
+  .file-queue {
+    display: none; margin-top: 12px;
+    max-height: 200px; overflow-y: auto;
+    border-top: 1px solid var(--border); padding-top: 12px;
+  }
+  .file-queue.visible { display: block; }
+  .queue-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0; border-bottom: 1px solid rgba(28,34,48,0.6);
+    font-size: 11px;
+  }
+  .queue-item:last-child { border-bottom: none; }
+  .queue-status { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .queue-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .queue-name.active { color: var(--text); }
+  .queue-name.done { color: var(--accent); }
+  .queue-name.error { color: var(--accent2); }
+  .queue-pct { font-size: 10px; color: var(--accent); font-weight: 600; min-width: 36px; text-align: right; }
+  .queue-mini-bar { width: 60px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+  .queue-mini-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.15s linear; }
+  .queue-mini-bar.done .queue-mini-fill { width: 100%; background: var(--accent); }
+  .queue-mini-bar.error .queue-mini-fill { width: 100%; background: var(--accent2); }
+
+  /* ── CONVERT BUTTON ── */
   .btn-convert {
     width: 100%; margin-top: 20px; padding: 18px;
     background: var(--accent); color: #000; border: none; border-radius: 10px;
@@ -210,7 +301,13 @@
   .btn-convert:hover:not(:disabled)::before { transform: translateX(100%); }
   .btn-convert:hover:not(:disabled) { box-shadow: 0 0 40px rgba(0,245,196,0.4); transform: translateY(-1px); }
   .btn-convert:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
-  .btn-convert.processing { background: linear-gradient(90deg, var(--accent3), var(--accent)); }
+  .btn-convert.processing { background: linear-gradient(90deg, var(--accent3), var(--accent)); animation: shimmer 2s linear infinite; }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+
+  /* ── RESULT CARD ── */
   .result-card {
     display: none; background: rgba(0,245,196,0.04);
     border: 1px solid rgba(0,245,196,0.25); border-radius: 12px;
@@ -224,6 +321,7 @@
   }
   .result-title { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
   .result-meta { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+  .result-downloads { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
   .btn-download {
     display: inline-flex; align-items: center; gap: 10px;
     padding: 13px 32px; background: var(--accent); color: #000;
@@ -231,6 +329,14 @@
     cursor: pointer; text-decoration: none; transition: all 0.3s; margin: 4px;
   }
   .btn-download:hover { box-shadow: 0 0 30px rgba(0,245,196,0.35); transform: translateY(-2px); }
+  .btn-download-single {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 20px; background: rgba(0,245,196,0.1); color: var(--accent);
+    border: 1px solid rgba(0,245,196,0.3); border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: all 0.2s; white-space: nowrap; max-width: 240px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn-download-single:hover { background: rgba(0,245,196,0.18); }
   .btn-new {
     display: inline-flex; align-items: center; gap: 10px;
     padding: 13px 24px; background: transparent; color: var(--muted);
@@ -245,10 +351,6 @@
     color: var(--accent2); line-height: 1.6;
   }
   .error-box.visible { display: block; }
-  .sr-only {
-    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
   .footer { text-align: center; margin-top: 60px; font-size: 11px; color: var(--muted); letter-spacing: 1px; line-height: 2; }
   .footer span { color: var(--accent3); }
   .offline-badge {
@@ -269,52 +371,65 @@
   .bars-deco span:nth-child(7){height:85%;animation-delay:.35s}
   .bars-deco span:nth-child(8){height:55%;animation-delay:.25s}
   @keyframes barAnim { 0%,100%{transform:scaleY(.5);opacity:.4} 50%{transform:scaleY(1);opacity:1} }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
-  }
-  @media (max-width: 560px) {
-    .container { padding: 36px 16px; }
-    .header { margin-bottom: 36px; }
-    .drop-zone { padding: 40px 20px; }
-    .setting-row { align-items: flex-start; gap: 14px; flex-direction: column; }
-    .setting-control, .setting-control select { width: 100%; }
-    .btn-download, .btn-new { width: 100%; justify-content: center; margin: 4px 0; }
-  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 1s linear infinite; }
 </style>
 </head>
 <body>
-<main class="container">
-  <header class="header">
+<div class="container">
+  <div class="header">
     <div class="bars-deco">
       <span></span><span></span><span></span><span></span>
       <span></span><span></span><span></span><span></span>
     </div>
     <div class="offline-badge"><span class="offline-dot"></span> OFFLINE READY</div>
-    <div class="logo-tag">⚡ Audio Extractor v2.0</div>
+    <div class="logo-tag">⚡ Audio Extractor v3.0</div>
     <h1>SOUND<span>RIP</span></h1>
     <p class="subtitle">
-      Konversi file video atau audio menjadi MP3 langsung di browser.<br>
-      100% offline — tidak ada file yang diunggah ke server.
+      Konversi video/audio menjadi MP3 berkualitas tinggi — GPU &amp; Multi-thread accelerated.<br>
+      100% offline · tidak butuh internet · tidak ada upload ke server.
     </p>
-  </header>
+  </div>
 
-  <section class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Pilih file video atau audio" aria-describedby="dropZoneHelp">
+  <!-- MODE TOGGLE -->
+  <div class="mode-select" id="modeSelect">
+    <button class="mode-btn active" id="modeSingle" data-mode="single">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      SATU FILE
+    </button>
+    <button class="mode-btn" id="modeBatch" data-mode="batch">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      BATCH (SEMUA)
+    </button>
+  </div>
+
+  <!-- GPU INFO BADGE -->
+  <div class="gpu-badge gpu-cpu" id="gpuBadge">
+    <span class="gpu-dot"></span>
+    <span id="gpuLabel">🔍 Mendeteksi akselerasi GPU...</span>
+    <span class="gpu-threads" id="gpuThreads"></span>
+  </div>
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone" id="dropZone" style="margin-top:16px;">
     <input type="file" id="fileInput" accept="video/*,audio/*">
     <div class="drop-icon">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
       </svg>
     </div>
-    <div class="drop-title">Seret &amp; Lepas File Video</div>
-    <p class="drop-sub" id="dropZoneHelp">Klik atau tekan Enter untuk memilih file dari komputer Anda</p>
+    <div class="drop-title" id="dropTitle">Seret &amp; Lepas Satu File</div>
+    <p class="drop-sub" id="dropSub">atau klik untuk memilih satu file audio/video</p>
     <div class="drop-formats">
       <span class="format-badge">MP4</span><span class="format-badge">MKV</span>
       <span class="format-badge">AVI</span><span class="format-badge">MOV</span>
       <span class="format-badge">WEBM</span><span class="format-badge">FLV</span>
       <span class="format-badge">WMV</span><span class="format-badge">M4V</span>
     </div>
-  </section>
+  </div>
 
+  <!-- FILE INFO -->
   <div class="file-info" id="fileInfo">
     <div class="file-icon">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent3)" stroke-width="1.5">
@@ -326,23 +441,24 @@
       <div class="file-name" id="fileName">—</div>
       <div class="file-meta" id="fileMeta">—</div>
     </div>
-    <button class="file-remove" id="removeFile" type="button" title="Hapus file" aria-label="Hapus file terpilih">
+    <button class="file-remove" id="removeFile" title="Hapus file">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
     </button>
   </div>
 
+  <!-- SETTINGS -->
   <div class="settings" id="settings">
     <div class="settings-title">⚙ Pengaturan Output</div>
     <div class="setting-row">
       <div>
-        <label class="setting-label" for="bitrate">Kualitas MP3</label>
+        <div class="setting-label">Kualitas MP3</div>
         <div class="setting-desc">Bitrate audio untuk file output</div>
       </div>
       <div class="setting-control">
         <select id="bitrate">
-          <option value="320">320 kbps — Sangat tinggi</option>
+          <option value="320">320 kbps — Lossless</option>
           <option value="256">256 kbps — Sangat Tinggi</option>
           <option value="192">192 kbps — Tinggi</option>
           <option value="128" selected>128 kbps — Standar</option>
@@ -352,7 +468,7 @@
     </div>
     <div class="setting-row">
       <div>
-        <label class="setting-label" for="channels">Channel</label>
+        <div class="setting-label">Channel</div>
         <div class="setting-desc">Stereo atau Mono</div>
       </div>
       <div class="setting-control">
@@ -362,28 +478,60 @@
         </select>
       </div>
     </div>
+    <div class="setting-row" id="parallelRow" style="display:none;">
+      <div>
+        <div class="setting-label">Paralel Worker</div>
+        <div class="setting-desc">Thread CPU untuk encoding simultan</div>
+      </div>
+      <div class="setting-control">
+        <select id="parallelCount">
+          <option value="1">1 thread</option>
+          <option value="2" selected>2 thread</option>
+          <option value="4">4 thread</option>
+        </select>
+      </div>
+    </div>
   </div>
 
+  <!-- WAVEFORM + PROGRESS -->
   <div class="waveform-container" id="waveformWrap">
     <div class="waveform-label">
       <span>Waveform Audio</span>
       <span class="waveform-status" id="waveStatus">● Memproses...</span>
     </div>
     <canvas id="waveform" width="700" height="80"></canvas>
+
+    <!-- OVERALL BATCH PROGRESS -->
+    <div class="progress-overall" id="overallProgress">
+      <div class="progress-overall-header">
+        <span id="overallLabel">BATCH PROGRESS</span>
+        <span id="overallPct" style="color:var(--accent3);font-weight:600;">0%</span>
+      </div>
+      <div class="progress-overall-bar-bg">
+        <div class="progress-overall-fill" id="overallFill"></div>
+      </div>
+    </div>
+
+    <!-- PER-FILE PROGRESS -->
     <div class="progress-wrap">
-      <div class="progress-bar-bg" role="progressbar" aria-label="Kemajuan konversi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
+      <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="progressFill"></div>
       </div>
       <div class="progress-text">
         <span id="progressLabel">Menganalisis audio...</span>
         <span class="progress-pct" id="progressPct">0%</span>
       </div>
+      <div class="progress-eta" id="progressEta"></div>
     </div>
+
+    <!-- FILE QUEUE (batch mode) -->
+    <div class="file-queue" id="fileQueue"></div>
   </div>
 
-  <button class="btn-convert" id="convertBtn" type="button" disabled>KONVERSI KE MP3</button>
+  <button class="btn-convert" id="convertBtn" disabled>KONVERSI KE MP3</button>
 
-  <section class="result-card" id="resultCard" tabindex="-1" aria-live="polite">
+  <!-- RESULT CARD -->
+  <div class="result-card" id="resultCard">
     <div class="result-icon">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
         <polyline points="20 6 9 17 4 12"/>
@@ -391,33 +539,27 @@
     </div>
     <div class="result-title">Konversi Berhasil! 🎵</div>
     <div class="result-meta" id="resultMeta">File MP3 siap diunduh</div>
-    <a id="downloadLink" class="btn-download" download>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Unduh MP3
-    </a>
-    <button class="btn-new" id="newConvert" type="button">
+    <div class="result-downloads" id="resultDownloads"></div>
+    <button class="btn-download" id="downloadAll" type="button" style="display:none;">⬇ Unduh Semua</button>
+    <button class="btn-new" id="newConvert">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="1 4 1 10 7 10"/>
         <path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
       </svg>
       Konversi Baru
     </button>
-  </section>
+  </div>
 
-  <div class="error-box" id="errorBox" role="alert" aria-live="assertive"></div>
+  <div class="error-box" id="errorBox"></div>
 
-  <footer class="footer">
+  <div class="footer">
     Berjalan sepenuhnya <span>offline</span> di browser Anda — privasi terjamin<br>
-    Menggunakan <span>Web Audio API</span> + <span>LAME MP3 Encoder</span><br>
-    Format yang dapat diproses mengikuti dukungan codec browser Anda.
-  </footer>
-</main>
+    <span>Web Audio API</span> + <span>LAME MP3 Encoder</span> + <span>Web Workers</span> + <span>WebGPU Compute</span>
+  </div>
+</div>
 
-<!-- Bundled third-party encoder. See THIRD_PARTY_NOTICES.md before redistributing. -->
-<script>
+<!-- LAMEJS CLEAN — artifact -e dan lamejs=lamejs() sengaja dihapus -->
+<script id="lamejsBundle">
 function lamejs(){function X(c){return new Int32Array(c)}function K(c){return new Float32Array(c)}function ca(c){if(1==c.length)return K(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(ca(c));return n}function Ia(c){if(1==c.length)return X(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(Ia(c));return n}function dc(c){if(1==c.length)return new Int16Array(c[0]);var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(dc(c));return n}function Ob(c){if(1==c.length)return Array(c[0]);
 var k=c[0];c=c.slice(1);for(var n=[],u=0;u<k;u++)n.push(Ob(c));return n}function ra(c){this.ordinal=c}function G(c){this.ordinal=c}function la(c){this.ordinal=function(){return c}}function mc(){this.getLameVersion=function(){return"3.98.4"};this.getLameShortVersion=function(){return"3.98.4"};this.getLameVeryShortVersion=function(){return"LAME3.98r"};this.getPsyVersion=function(){return"0.93"};this.getLameUrl=function(){return"http://www.mp3dev.org/"};this.getLameOsBitness=function(){return"32bits"}}
 function Y(){function c(f,b,c,a,m,k){for(;0!=m--;)c[a]=1E-10+f[b+0]*k[0]-c[a-1]*k[1]+f[b-1]*k[2]-c[a-2]*k[3]+f[b-2]*k[4]-c[a-3]*k[5]+f[b-3]*k[6]-c[a-4]*k[7]+f[b-4]*k[8]-c[a-5]*k[9]+f[b-5]*k[10]-c[a-6]*k[11]+f[b-6]*k[12]-c[a-7]*k[13]+f[b-7]*k[14]-c[a-8]*k[15]+f[b-8]*k[16]-c[a-9]*k[17]+f[b-9]*k[18]-c[a-10]*k[19]+f[b-10]*k[20],++a,++b}function k(f,b,c,a,m,k){for(;0!=m--;)c[a]=f[b+0]*k[0]-c[a-1]*k[1]+f[b-1]*k[2]-c[a-2]*k[3]+f[b-2]*k[4],++a,++b}function n(f){return f*f}var V=Y.RMS_WINDOW_TIME_NUMERATOR,
@@ -725,296 +867,762 @@ ia.IXMAX_VAL=8206;var sa={};sa.SFBMAX=3*c.SBMAX_s;c.ENCDELAY=576;c.POSTDELAY=115
 4,!0);break;default:throw"extended fmt chunk not implemented";}w+=u;u=Fa.data;for(var B=0;u!=n;){n=c.getUint32(w,!1);B=c.getUint32(w+4,!0);if(u==n)break;w+=B+8}k.dataLen=B;k.dataOffset=w+8;return k}};sa.SFBMAX=3*c.SBMAX_s;lamejs.Mp3Encoder=function(c,k,n){3!=arguments.length&&(console.error("WARN: Mp3Encoder(channels, samplerate, kbps) not specified"),c=1,k=44100,n=128);var u=new W,w=new Kc,B=new Y,G=new qa,f=new wc,b=new ia,v=new Ec,a=new zb,m=new mc,z=new Nc,e=new xc,l=new qb,d=new Lc,g=new Mc;
 u.setModules(B,G,f,b,v,a,m,z,g);G.setModules(B,g,m,a);z.setModules(G,m);f.setModules(u);v.setModules(G,e,b,l);b.setModules(l,e,u.enc.psy);e.setModules(G);l.setModules(b);a.setModules(u,G,m);w.setModules(d,g);d.setModules(m,z,f);var q=u.lame_init();q.num_channels=c;q.in_samplerate=k;q.brate=n;q.mode=la.STEREO;q.quality=3;q.bWriteVbrTag=!1;q.disable_reservoir=!0;q.write_id3tag_automatic=!1;u.lame_init_params(q);var D=1152,p=0|1.25*D+7200,r=new Int8Array(p);this.encodeBuffer=function(a,b){1==c&&(b=a);
 a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buffer(q,a,b,a.length,r,0,p);return new Int8Array(r.subarray(0,a))};this.flush=function(){var a=u.lame_encode_flush(q,r,0,p);return new Int8Array(r.subarray(0,a))}};lamejs.WavHeader=Fa}lamejs();
+
 </script>
 <script>
-let selectedFile = null;
-let mp3Blob = null;
-let outputUrl = null;
-let isProcessing = false;
+// ─────────────────────────────────────────────────────────
+// GLOBALS
+// ─────────────────────────────────────────────────────────
+let selectedFiles = [];
+let batchOutputs  = [];
+let currentMode   = 'single';
+let gpuInfo       = null;
+let workerUrl     = null;
+const MAX_WORKERS = Math.max(1, Math.min(navigator.hardwareConcurrency || 2, 8));
 
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const fileInfo = document.getElementById('fileInfo');
-const fileNameEl = document.getElementById('fileName');
-const fileMetaEl = document.getElementById('fileMeta');
-const removeFileBtn = document.getElementById('removeFile');
-const settingsEl = document.getElementById('settings');
-const waveformWrap = document.getElementById('waveformWrap');
-const waveCanvas = document.getElementById('waveform');
-const waveStatus = document.getElementById('waveStatus');
-const progressFill = document.getElementById('progressFill');
-const progressBar = document.getElementById('progressBar');
-const progressLabel = document.getElementById('progressLabel');
-const progressPct = document.getElementById('progressPct');
-const convertBtn = document.getElementById('convertBtn');
-const resultCard = document.getElementById('resultCard');
-const resultMeta = document.getElementById('resultMeta');
-const downloadLink = document.getElementById('downloadLink');
-const newConvertBtn = document.getElementById('newConvert');
-const errorBox = document.getElementById('errorBox');
-const supportedExtensions = new Set([
-  '3gp', 'aac', 'aiff', 'avi', 'flac', 'm4a', 'm4v', 'mkv', 'mov',
-  'mp3', 'mp4', 'mpeg', 'mpg', 'oga', 'ogg', 'opus', 'wav', 'webm', 'wma'
-]);
+// ─────────────────────────────────────────────────────────
+// DOM REFS
+// ─────────────────────────────────────────────────────────
+const dropZone       = document.getElementById('dropZone');
+const fileInput      = document.getElementById('fileInput');
+const fileInfo       = document.getElementById('fileInfo');
+const fileNameEl     = document.getElementById('fileName');
+const fileMetaEl     = document.getElementById('fileMeta');
+const removeFileBtn  = document.getElementById('removeFile');
+const settingsEl     = document.getElementById('settings');
+const waveformWrap   = document.getElementById('waveformWrap');
+const waveCanvas     = document.getElementById('waveform');
+const waveStatus     = document.getElementById('waveStatus');
+const progressFill   = document.getElementById('progressFill');
+const progressLabel  = document.getElementById('progressLabel');
+const progressPct    = document.getElementById('progressPct');
+const progressEta    = document.getElementById('progressEta');
+const overallFill    = document.getElementById('overallFill');
+const overallLabel   = document.getElementById('overallLabel');
+const overallPct     = document.getElementById('overallPct');
+const overallProgress= document.getElementById('overallProgress');
+const fileQueue      = document.getElementById('fileQueue');
+const convertBtn     = document.getElementById('convertBtn');
+const resultCard     = document.getElementById('resultCard');
+const resultMeta     = document.getElementById('resultMeta');
+const resultDownloads= document.getElementById('resultDownloads');
+const downloadAllBtn = document.getElementById('downloadAll');
+const newConvertBtn  = document.getElementById('newConvert');
+const errorBox       = document.getElementById('errorBox');
+const gpuBadge       = document.getElementById('gpuBadge');
+const gpuLabel       = document.getElementById('gpuLabel');
+const gpuThreads     = document.getElementById('gpuThreads');
+const parallelRow    = document.getElementById('parallelRow');
 
-dropZone.addEventListener('click', () => {
-  if (!isProcessing) fileInput.click();
+// ─────────────────────────────────────────────────────────
+// WORKER BLOB
+// Inject clean lamejs (no -e artifact) into Worker thread.
+// Uses ArrayBuffer ownership transfer (zero-copy) for PCM data.
+// ─────────────────────────────────────────────────────────
+function createWorkerUrl() {
+  let lameCode = document.getElementById('lamejsBundle').textContent;
+  // Extra defensive sanitize — strip any stray '-e' artifact lines
+  lameCode = lameCode
+    .split('\n')
+    .filter(function(line) { return !/^\s*-e\s*$/.test(line); })
+    .join('\n');
+
+  const workerLogic = [
+    'self.onmessage = function(msg) {',
+    '  var d = msg.data;',
+    '  var leftData = d.left, rightData = d.right;',
+    '  var channels = d.channels, sampleRate = d.sampleRate;',
+    '  var bitrate = d.bitrate, fileIndex = d.fileIndex;',
+    '  try {',
+    '    var enc = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);',
+    '    var CHUNK = 1152;',
+    '    var chunks = [];',
+    '    var total = leftData.length;',
+    '    var lastPct = -1;',
+    '    var startTs = Date.now();',
+    '    for (var i = 0; i < total; i += CHUNK) {',
+    '      var l = leftData.subarray(i, i + CHUNK);',
+    '      var r = rightData.subarray(i, i + CHUNK);',
+    '      var buf = channels === 1 ? enc.encodeBuffer(l) : enc.encodeBuffer(l, r);',
+    '      if (buf.length) chunks.push(new Uint8Array(buf));',
+    '      var pct = Math.min(99, Math.round(i / total * 100));',
+    '      if (pct !== lastPct) {',
+    '        lastPct = pct;',
+    '        var elapsed = (Date.now() - startTs) / 1000;',
+    '        var eta = pct > 0 ? Math.round(elapsed / pct * (100 - pct)) : 0;',
+    '        self.postMessage({ type: "progress", fileIndex: fileIndex, pct: pct, eta: eta });',
+    '      }',
+    '    }',
+    '    var tail = enc.flush();',
+    '    if (tail.length) chunks.push(new Uint8Array(tail));',
+    '    var size = 0;',
+    '    for (var j = 0; j < chunks.length; j++) size += chunks[j].length;',
+    '    var out = new Uint8Array(size);',
+    '    var off = 0;',
+    '    for (var k = 0; k < chunks.length; k++) { out.set(chunks[k], off); off += chunks[k].length; }',
+    '    self.postMessage({ type: "done", fileIndex: fileIndex, data: out }, [out.buffer]);',
+    '  } catch(err) {',
+    '    self.postMessage({ type: "error", fileIndex: fileIndex, message: String(err) });',
+    '  }',
+    '};'
+  ].join('\n');
+
+  var blob = new Blob([lameCode + '\n' + workerLogic], { type: 'application/javascript' });
+  return URL.createObjectURL(blob);
+}
+
+// ─────────────────────────────────────────────────────────
+// GPU DETECTION
+// WebGPU → WebGL (NVIDIA/AMD string detect) → CPU fallback
+// On Optimus laptops: browser binds to iGPU unless forced.
+// We detect this and inform user via badge.
+// ─────────────────────────────────────────────────────────
+async function detectGPU() {
+  // 1. WebGPU — explicitly request high-performance (discrete) adapter
+  if ('gpu' in navigator) {
+    try {
+      var adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      if (adapter) {
+        var info = {};
+        try { info = await adapter.requestAdapterInfo(); } catch(infoErr) {}
+
+        // Detect whether it's truly discrete or integrated
+        var name   = info.device || info.description || '';
+        var vendor = (info.vendor || '').toLowerCase();
+        var nameUp = name.toUpperCase();
+
+        var isNvidia = nameUp.includes('NVIDIA') || nameUp.includes('GEFORCE') ||
+                       nameUp.includes('RTX')    || nameUp.includes('GTX') ||
+                       vendor.includes('nvidia');
+        var isAmd    = nameUp.includes('AMD')  || nameUp.includes('RADEON') ||
+                       vendor.includes('amd');
+        var isIntel  = nameUp.includes('INTEL') || vendor.includes('intel');
+        var isIntegrated = isIntel || nameUp.includes('UHD') || nameUp.includes('IRIS') ||
+                           name === '' || name === 'WebGPU GPU';
+
+        // Cross-verify with WebGL to get real GPU name if WebGPU gives empty string
+        var glName = getWebGLRenderer();
+        if ((!name || name === 'WebGPU GPU') && glName) name = glName;
+
+        return {
+          tier: isNvidia ? 'nvidia' : (isAmd ? 'amd' : (isIntegrated ? 'integrated' : 'webgpu')),
+          name: name || glName || 'GPU',
+          vendor: info.vendor || '',
+          adapter: adapter,
+          isIntegrated: isIntegrated,
+          glName: glName,
+          hasWebGPU: true
+        };
+      }
+    } catch(gpuErr) { /* fall through */ }
+  }
+
+  // 2. WebGL fallback — read real renderer string
+  var glName = getWebGLRenderer();
+  if (glName) {
+    var up = glName.toUpperCase();
+    var tier = 'integrated';
+    if (up.includes('NVIDIA') || up.includes('GEFORCE') || up.includes('RTX') || up.includes('GTX'))
+      tier = 'nvidia';
+    else if (up.includes('AMD') || up.includes('RADEON') || up.includes('RX '))
+      tier = 'amd';
+    return { tier: tier, name: glName, hasWebGPU: false, isIntegrated: tier === 'integrated' };
+  }
+
+  return { tier: 'cpu', name: 'CPU Only', hasWebGPU: false, isIntegrated: false };
+}
+
+function getWebGLRenderer() {
+  try {
+    var canvas = document.createElement('canvas');
+    var gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return '';
+    var ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (!ext) return '';
+    return gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '';
+  } catch(err) { return ''; }
+}
+
+// ─────────────────────────────────────────────────────────
+// WEBGPU COMPUTE — Float32 → Int16 on GPU
+// Uses WGSL compute shader dispatched in 256-thread workgroups.
+// Effective for buffers > ~100k samples; falls back to CPU otherwise.
+// NOTE: On Optimus laptops this runs on iGPU (Intel/AMD MUX).
+// ─────────────────────────────────────────────────────────
+async function gpuFloat32ToInt16(adapter, floatArr) {
+  if (!adapter || floatArr.length < 65536) {
+    // Small buffers: CPU is faster due to GPU command overhead
+    return cpuFloat32ToInt16(floatArr);
+  }
+  try {
+    var device = await adapter.requestDevice();
+    var n = floatArr.length;
+
+    var WGSL = '\n' +
+      '@group(0) @binding(0) var<storage, read>            inp : array<f32>;\n' +
+      '@group(0) @binding(1) var<storage, read_write> outp : array<i32>;\n' +
+      '@compute @workgroup_size(256)\n' +
+      'fn main(@builtin(global_invocation_id) gid : vec3<u32>) {\n' +
+      '  let i = gid.x;\n' +
+      '  if (i >= arrayLength(&inp)) { return; }\n' +
+      '  var v : f32 = clamp(inp[i], -1.0, 1.0);\n' +
+      '  outp[i] = select(i32(v * 32767.0), i32(v * 32768.0), v < 0.0);\n' +
+      '}\n';
+
+    var shaderMod = device.createShaderModule({ code: WGSL });
+
+    var pipeline;
+    if (typeof device.createComputePipelineAsync === 'function') {
+      pipeline = await device.createComputePipelineAsync({
+        layout: 'auto', compute: { module: shaderMod, entryPoint: 'main' }
+      });
+    } else {
+      pipeline = device.createComputePipeline({
+        layout: 'auto', compute: { module: shaderMod, entryPoint: 'main' }
+      });
+    }
+
+    var inputBuf   = device.createBuffer({ size: n * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST });
+    var outputBuf  = device.createBuffer({ size: n * 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
+    var stagingBuf = device.createBuffer({ size: n * 4, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+
+    device.queue.writeBuffer(inputBuf, 0, floatArr);
+
+    var bindGroup = device.createBindGroup({
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: inputBuf  } },
+        { binding: 1, resource: { buffer: outputBuf } }
+      ]
+    });
+
+    var cmdEncoder = device.createCommandEncoder();
+    var computePass = cmdEncoder.beginComputePass();
+    computePass.setPipeline(pipeline);
+    computePass.setBindGroup(0, bindGroup);
+    computePass.dispatchWorkgroups(Math.ceil(n / 256));
+    computePass.end();
+    cmdEncoder.copyBufferToBuffer(outputBuf, 0, stagingBuf, 0, n * 4);
+    device.queue.submit([cmdEncoder.finish()]);
+
+    await stagingBuf.mapAsync(GPUMapMode.READ);
+    var int32view = new Int32Array(stagingBuf.getMappedRange());
+    var result = new Int16Array(n);
+    for (var ii = 0; ii < n; ii++) result[ii] = int32view[ii];
+    stagingBuf.unmap();
+    device.destroy();
+    return result;
+  } catch(gpuComputeErr) {
+    console.warn('[SoundRip] WebGPU compute fallback to CPU:', gpuComputeErr);
+    return cpuFloat32ToInt16(floatArr);
+  }
+}
+
+function cpuFloat32ToInt16(a) {
+  var out = new Int16Array(a.length);
+  for (var i = 0; i < a.length; i++) {
+    var v = a[i] < -1 ? -1 : (a[i] > 1 ? 1 : a[i]);
+    out[i] = v < 0 ? (v * 0x8000) : (v * 0x7FFF);
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────
+// MODE TOGGLE
+// ─────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    currentMode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    resetState();
+    if (currentMode === 'batch') {
+      fileInput.setAttribute('multiple', '');
+      fileInput.setAttribute('webkitdirectory', '');
+      fileInput.setAttribute('directory', '');
+      document.getElementById('dropTitle').textContent = 'Seret & Lepas Banyak File / Folder';
+      document.getElementById('dropSub').textContent   = 'atau klik untuk memilih banyak file / satu folder';
+      parallelRow.style.display = 'flex';
+    } else {
+      fileInput.removeAttribute('multiple');
+      fileInput.removeAttribute('webkitdirectory');
+      fileInput.removeAttribute('directory');
+      document.getElementById('dropTitle').textContent = 'Seret & Lepas Satu File';
+      document.getElementById('dropSub').textContent   = 'atau klik untuk memilih satu file audio/video';
+      parallelRow.style.display = 'none';
+    }
+  });
 });
-dropZone.addEventListener('keydown', event => {
-  if (isProcessing || (event.key !== 'Enter' && event.key !== ' ')) return;
-  event.preventDefault();
-  fileInput.click();
-});
-dropZone.addEventListener('dragover', event => {
-  event.preventDefault();
-  if (!isProcessing) dropZone.classList.add('dragover');
-});
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', event => {
-  event.preventDefault();
+
+// ─────────────────────────────────────────────────────────
+// FILE HANDLING
+// ─────────────────────────────────────────────────────────
+dropZone.addEventListener('click', function() { fileInput.click(); });
+dropZone.addEventListener('dragover', function(ev) { ev.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop', function(ev) {
+  ev.preventDefault();
   dropZone.classList.remove('dragover');
-  if (isProcessing) return;
-  const file = event.dataTransfer.files[0];
-  if (file) handleFile(file);
+  var files = Array.from(ev.dataTransfer.files);
+  addFiles(currentMode === 'single' ? [files[0]] : files);
 });
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+fileInput.addEventListener('change', function() {
+  var files = Array.from(fileInput.files);
+  addFiles(currentMode === 'single' ? [files[0]] : files);
 });
 removeFileBtn.addEventListener('click', resetState);
 newConvertBtn.addEventListener('click', resetState);
-window.addEventListener('beforeunload', releaseOutputUrl);
 
-function handleFile(file) {
-  if (!isLikelyMediaFile(file)) {
-    showError('Pilih file video atau audio yang valid. Format yang berhasil diproses tetap bergantung pada codec yang didukung browser.');
-    return;
+function isValidMediaFile(f) {
+  return f && (f.type.startsWith('video/') || f.type.startsWith('audio/') ||
+    /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v|mp3|wav|m4a|ogg|flac|aac)$/i.test(f.name));
+}
+
+function addFiles(files) {
+  var valid = files.filter(isValidMediaFile);
+  if (currentMode === 'single') {
+    selectedFiles = valid.slice(0, 1);
+  } else {
+    selectedFiles = Array.from(new Map(
+      selectedFiles.concat(valid).map(function(f) { return [f.name + f.size, f]; })
+    ).values());
   }
+  if (!selectedFiles.length) { showError('Tidak ada file audio/video yang valid.'); return; }
 
-  releaseOutputUrl();
-  selectedFile = file;
-  mp3Blob = null;
-  fileNameEl.textContent = file.name;
-  fileMetaEl.textContent = `${formatBytes(file.size)} · ${file.type || 'tipe file tidak terdeteksi'}`;
+  var totalMB = (selectedFiles.reduce(function(n, f) { return n + f.size; }, 0) / 1048576).toFixed(2);
+  fileNameEl.textContent = selectedFiles.length === 1 ? selectedFiles[0].name : (selectedFiles.length + ' file dipilih');
+  fileMetaEl.textContent = selectedFiles.length === 1
+    ? (selectedFiles[0].size / 1048576).toFixed(2) + ' MB'
+    : (totalMB + ' MB total · batch mode');
+
   fileInfo.classList.add('visible');
   settingsEl.classList.add('visible');
   convertBtn.disabled = false;
   resultCard.classList.remove('visible');
   errorBox.classList.remove('visible');
   waveformWrap.classList.remove('visible');
-  setProgress(0, 'Menunggu konversi...');
-  waveStatus.textContent = '● Siap diproses';
-  waveStatus.style.animation = '';
-  waveStatus.style.color = '';
 }
 
 function resetState() {
-  if (isProcessing) return;
-  releaseOutputUrl();
-  selectedFile = null;
-  mp3Blob = null;
+  selectedFiles = []; batchOutputs = [];
   fileInput.value = '';
   fileInfo.classList.remove('visible');
   settingsEl.classList.remove('visible');
   waveformWrap.classList.remove('visible');
   resultCard.classList.remove('visible');
   errorBox.classList.remove('visible');
-  convertBtn.disabled = true;
+  overallProgress.classList.remove('visible');
+  fileQueue.classList.remove('visible');
+  fileQueue.innerHTML = '';
+  resultDownloads.innerHTML = '';
+  downloadAllBtn.style.display = 'none';
   convertBtn.textContent = 'KONVERSI KE MP3';
   convertBtn.classList.remove('processing');
-  setProgress(0, 'Menunggu konversi...');
+  convertBtn.disabled = true;
+  setFileProgress(0, 'Siap...');
 }
 
-function setProgress(pct, label) {
-  progressFill.style.width = `${pct}%`;
-  progressPct.textContent = `${pct}%`;
-  progressLabel.textContent = label;
-  progressBar.setAttribute('aria-valuenow', String(pct));
+// ─────────────────────────────────────────────────────────
+// PROGRESS HELPERS
+// ─────────────────────────────────────────────────────────
+function setFileProgress(pct, label, eta) {
+  progressFill.style.width  = pct + '%';
+  progressPct.textContent   = pct + '%';
+  progressLabel.textContent = label || '';
+  progressEta.textContent   = (eta > 0 && pct < 100) ? ('ETA: ~' + eta + 's') : '';
 }
 
-function showError(message) {
-  errorBox.textContent = `⚠ ${message}`;
+function setOverallProgress(pct, label) {
+  overallFill.style.width = pct + '%';
+  overallPct.textContent  = Math.round(pct) + '%';
+  overallLabel.textContent = label || 'BATCH PROGRESS';
+}
+
+function showError(msg) {
+  errorBox.textContent = '⚠ ' + msg;
   errorBox.classList.add('visible');
   convertBtn.disabled = false;
   convertBtn.textContent = 'COBA LAGI';
   convertBtn.classList.remove('processing');
 }
 
-function setProcessing(processing) {
-  isProcessing = processing;
-  dropZone.setAttribute('aria-disabled', String(processing));
-  removeFileBtn.disabled = processing;
-}
-
-function releaseOutputUrl() {
-  if (outputUrl) {
-    URL.revokeObjectURL(outputUrl);
-    outputUrl = null;
-  }
-}
-
-function isLikelyMediaFile(file) {
-  if (file.type.startsWith('audio/') || file.type.startsWith('video/')) return true;
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  return supportedExtensions.has(extension);
-}
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / (1024 ** exponent);
-  return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(value)} ${units[exponent]}`;
-}
-
-function drawWaveform(channelData) {
-  const ctx = waveCanvas.getContext('2d');
-  const width = waveCanvas.width;
-  const height = waveCanvas.height;
-  ctx.clearRect(0, 0, width, height);
-  const step = Math.ceil(channelData.length / width);
-  const mid = height / 2;
-  ctx.strokeStyle = 'rgba(0,245,196,0.7)';
-  ctx.lineWidth = 1;
+// ─────────────────────────────────────────────────────────
+// WAVEFORM
+// ─────────────────────────────────────────────────────────
+function drawWaveform(data) {
+  var ctx  = waveCanvas.getContext('2d');
+  var W    = waveCanvas.width, H = waveCanvas.height;
+  ctx.clearRect(0, 0, W, H);
+  var step = Math.ceil(data.length / W);
+  var mid  = H / 2;
+  ctx.strokeStyle = 'rgba(0,245,196,0.75)';
+  ctx.lineWidth   = 1;
   ctx.beginPath();
-  for (let x = 0; x < width; x++) {
-    let min = 1;
-    let max = -1;
-    for (let j = 0; j < step; j++) {
-      const value = channelData[x * step + j] || 0;
-      min = Math.min(min, value);
-      max = Math.max(max, value);
+  for (var x = 0; x < W; x++) {
+    var min = 1, max = -1;
+    for (var j = 0; j < step; j++) {
+      var v = data[x * step + j] || 0;
+      if (v < min) min = v;
+      if (v > max) max = v;
     }
     ctx.moveTo(x, mid + min * mid * 0.85);
     ctx.lineTo(x, mid + max * mid * 0.85);
   }
   ctx.stroke();
-  const gradient = ctx.createLinearGradient(0, 0, width, 0);
-  gradient.addColorStop(0, 'rgba(123,97,255,0.3)');
-  gradient.addColorStop(0.5, 'rgba(0,245,196,0.15)');
-  gradient.addColorStop(1, 'rgba(123,97,255,0.3)');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
 }
 
-function floatTo16Bit(float32Array) {
-  const int16Array = new Int16Array(float32Array.length);
-  for (let index = 0; index < float32Array.length; index++) {
-    const sample = Math.max(-1, Math.min(1, float32Array[index]));
-    int16Array[index] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+// ─────────────────────────────────────────────────────────
+// FILE QUEUE UI (batch)
+// ─────────────────────────────────────────────────────────
+function buildFileQueue(files) {
+  fileQueue.innerHTML = '';
+  files.forEach(function(f, i) {
+    var row = document.createElement('div');
+    row.className = 'queue-item';
+    row.id = 'qi-' + i;
+    row.innerHTML =
+      '<div class="queue-status" id="qs-' + i + '">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>' +
+      '</div>' +
+      '<div class="queue-name" id="qn-' + i + '">' + f.name.substring(0, 40) + (f.name.length > 40 ? '…' : '') + '</div>' +
+      '<div class="queue-mini-bar" id="qb-' + i + '"><div class="queue-mini-fill" id="qf-' + i + '"></div></div>' +
+      '<div class="queue-pct" id="qp-' + i + '">—</div>';
+    fileQueue.appendChild(row);
+  });
+  fileQueue.classList.add('visible');
+}
+
+function updateQueueItem(i, state, pct) {
+  var nameEl = document.getElementById('qn-' + i);
+  var fillEl = document.getElementById('qf-' + i);
+  var pctEl  = document.getElementById('qp-' + i);
+  var statEl = document.getElementById('qs-' + i);
+  var barEl  = document.getElementById('qb-' + i);
+  if (!nameEl) return;
+  if (state === 'active') {
+    nameEl.className = 'queue-name active';
+    fillEl.style.width = (pct || 0) + '%';
+    pctEl.textContent  = (pct || 0) + '%';
+    statEl.innerHTML = '<svg class="spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>';
+  } else if (state === 'done') {
+    nameEl.className = 'queue-name done';
+    if (barEl) barEl.className = 'queue-mini-bar done';
+    fillEl.style.width = '100%';
+    pctEl.textContent = '✓';
+    statEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+  } else if (state === 'error') {
+    nameEl.className = 'queue-name error';
+    if (barEl) barEl.className = 'queue-mini-bar error';
+    pctEl.textContent = '✗';
+    statEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
   }
-  return int16Array;
 }
 
-convertBtn.addEventListener('click', async () => {
-  if (!selectedFile || isProcessing) return;
+// ─────────────────────────────────────────────────────────
+// ENCODE VIA WEB WORKER (returns Promise<Blob>)
+// Uses transferable ArrayBuffers — zero-copy to worker thread
+// ─────────────────────────────────────────────────────────
+function encodeViaWorker(left, right, channels, sampleRate, bitrate, fileIndex, onProgress) {
+  return new Promise(function(resolve, reject) {
+    if (!workerUrl) workerUrl = createWorkerUrl();
+    var worker = new Worker(workerUrl);
+    worker.onmessage = function(ev) {
+      var msg = ev.data;
+      if (msg.type === 'progress') {
+        onProgress(msg.pct, msg.eta);
+      } else if (msg.type === 'done') {
+        worker.terminate();
+        resolve(new Blob([msg.data], { type: 'audio/mpeg' }));
+      } else if (msg.type === 'error') {
+        worker.terminate();
+        reject(new Error(msg.message));
+      }
+    };
+    worker.onerror = function(ev) {
+      worker.terminate();
+      reject(new Error(ev.message || 'Worker error'));
+    };
+    // Transfer ownership of typed array buffers — avoids copying ~MB of PCM data
+    worker.postMessage(
+      { left: left, right: right, channels: channels, sampleRate: sampleRate, bitrate: bitrate, fileIndex: fileIndex },
+      [left.buffer, right.buffer]
+    );
+  });
+}
 
-  errorBox.classList.remove('visible');
-  resultCard.classList.remove('visible');
-  waveformWrap.classList.add('visible');
+// ─────────────────────────────────────────────────────────
+// DECODE + GPU PREPROCESS
+// ─────────────────────────────────────────────────────────
+async function decodeAndPrepare(file, channels, audioCtx) {
+  var arrayBuf = await file.arrayBuffer();
+  var buffer   = await audioCtx.decodeAudioData(arrayBuf);
+  drawWaveform(buffer.getChannelData(0));
+
+  var nc      = Math.min(channels, buffer.numberOfChannels);
+  var rawLeft  = buffer.getChannelData(0);
+  var rawRight = nc > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0);
+
+  var left, right;
+  var adapter = (gpuInfo && gpuInfo.hasWebGPU) ? gpuInfo.adapter : null;
+  if (adapter && rawLeft.length >= 65536) {
+    // WebGPU compute path: parallel Float32→Int16 on GPU
+    var results = await Promise.all([
+      gpuFloat32ToInt16(adapter, rawLeft),
+      gpuFloat32ToInt16(adapter, rawRight)
+    ]);
+    left  = results[0];
+    right = results[1];
+  } else {
+    left  = cpuFloat32ToInt16(rawLeft);
+    right = cpuFloat32ToInt16(rawRight);
+  }
+  return { left: left, right: right, nc: nc, sampleRate: buffer.sampleRate };
+}
+
+// ─────────────────────────────────────────────────────────
+// SINGLE FILE CONVERT
+// ─────────────────────────────────────────────────────────
+async function convertSingle() {
+  var file     = selectedFiles[0];
+  var bitrate  = parseInt(document.getElementById('bitrate').value, 10);
+  var channels = parseInt(document.getElementById('channels').value, 10);
+
   convertBtn.disabled = true;
   convertBtn.classList.add('processing');
   convertBtn.textContent = 'MEMPROSES...';
-  setProcessing(true);
+  waveformWrap.classList.add('visible');
+  resultCard.classList.remove('visible');
+  errorBox.classList.remove('visible');
+  overallProgress.classList.remove('visible');
 
-  const bitrate = Number.parseInt(document.getElementById('bitrate').value, 10);
-  const channels = Number.parseInt(document.getElementById('channels').value, 10);
-  let audioContext;
-
+  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   try {
-    if (!window.lamejs?.Mp3Encoder) {
-      throw new Error('Encoder MP3 tidak berhasil dimuat. Muat ulang halaman lalu coba lagi.');
-    }
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) throw new Error('Browser ini belum mendukung Web Audio API. Gunakan browser terbaru.');
+    waveStatus.textContent = '● Decoding audio...';
+    setFileProgress(5, 'Decoding: ' + file.name);
 
-    setProgress(10, 'Membaca file...');
-    waveStatus.textContent = '● Membaca file...';
-    const arrayBuffer = await selectedFile.arrayBuffer();
+    var prepared = await decodeAndPrepare(file, channels, audioCtx);
 
-    setProgress(25, 'Mendekode audio...');
-    waveStatus.textContent = '● Mendekode audio...';
-    audioContext = new AudioContext();
-    let audioBuffer;
-    try {
-      audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    } catch {
-      throw new Error('Audio pada file ini tidak dapat didekode oleh browser. Coba gunakan MP4, WebM, MP3, atau WAV yang didukung browser Anda.');
-    }
+    waveStatus.textContent = '● Encoding MP3 via Worker...';
+    setFileProgress(10, 'Memulai encoding...');
 
-    setProgress(40, 'Menganalisis waveform...');
-    waveStatus.textContent = '● Menganalisis gelombang...';
-    drawWaveform(audioBuffer.getChannelData(0));
-
-    setProgress(50, 'Menyiapkan encoder MP3...');
-    waveStatus.textContent = '● Encoding MP3...';
-    const numChannels = Math.min(channels, audioBuffer.numberOfChannels);
-    const leftData = audioBuffer.getChannelData(0);
-    const rightData = numChannels > 1 && audioBuffer.numberOfChannels > 1
-      ? audioBuffer.getChannelData(1)
-      : leftData;
-    const encoder = new window.lamejs.Mp3Encoder(numChannels, audioBuffer.sampleRate, bitrate);
-    const mp3Data = [];
-    const chunkSize = 1152;
-    const leftPcm = floatTo16Bit(leftData);
-    const rightPcm = numChannels > 1 ? floatTo16Bit(rightData) : leftPcm;
-    let processed = 0;
-
-    while (processed < leftData.length) {
-      const end = Math.min(processed + chunkSize, leftData.length);
-      const leftChunk = leftPcm.subarray(processed, end);
-      const rightChunk = rightPcm.subarray(processed, end);
-      const encoded = numChannels === 1
-        ? encoder.encodeBuffer(leftChunk)
-        : encoder.encodeBuffer(leftChunk, rightChunk);
-      if (encoded.length > 0) mp3Data.push(encoded);
-      processed = end;
-      const encodedPercent = Math.round((processed / leftData.length) * 100);
-      setProgress(50 + Math.round(encodedPercent * 0.45), `Encoding... ${encodedPercent}%`);
-      if (processed % (chunkSize * 25) === 0 || processed >= leftData.length) {
-        await new Promise(resolve => setTimeout(resolve, 0));
+    var blob = await encodeViaWorker(
+      prepared.left, prepared.right,
+      prepared.nc, prepared.sampleRate, bitrate, 0,
+      function(pct, eta) {
+        setFileProgress(10 + Math.round(pct * 0.9), '[Worker] Encoding ' + pct + '%', eta);
       }
-    }
+    );
 
-    const finalBuffer = encoder.flush();
-    if (finalBuffer.length > 0) mp3Data.push(finalBuffer);
-
-    setProgress(98, 'Menyusun file MP3...');
-    mp3Blob = new Blob(mp3Data, { type: 'audio/mpeg' });
-    releaseOutputUrl();
-    outputUrl = URL.createObjectURL(mp3Blob);
-
-    const outputName = `${selectedFile.name.replace(/\.[^/.]+$/, '')}.mp3`;
-    const duration = audioBuffer.duration;
-    const minutes = Math.floor(duration / 60);
-    const seconds = Math.floor(duration % 60).toString().padStart(2, '0');
-    downloadLink.href = outputUrl;
-    downloadLink.download = outputName;
-    resultMeta.textContent = `${outputName} · ${formatBytes(mp3Blob.size)} · ${minutes}:${seconds} · ${bitrate} kbps`;
-
-    setProgress(100, 'Selesai!');
+    setFileProgress(100, '✓ Selesai!');
     waveStatus.textContent = '✓ Selesai';
-    waveStatus.style.animation = 'none';
-    waveStatus.style.color = 'var(--accent)';
-    await new Promise(resolve => setTimeout(resolve, 250));
+
+    var url  = URL.createObjectURL(blob);
+    var name = file.name.replace(/\.[^/.]+$/, '') + '.mp3';
+    batchOutputs = [{ url: url, name: name }];
+
+    resultDownloads.innerHTML = '';
+    var link = document.createElement('a');
+    link.href = url; link.download = name;
+    link.className = 'btn-download';
+    link.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Unduh MP3';
+    resultDownloads.appendChild(link);
+    resultMeta.textContent = name + ' · ' + bitrate + ' kbps · ' + (blob.size / 1048576).toFixed(2) + ' MB';
+    downloadAllBtn.style.display = 'none';
     resultCard.classList.add('visible');
-    resultCard.focus();
-    convertBtn.textContent = 'KONVERSI KE MP3';
-    convertBtn.classList.remove('processing');
-    convertBtn.disabled = false;
-  } catch (error) {
-    console.error(error);
-    showError(error.message || 'Terjadi kesalahan. Pastikan file media valid.');
+
+  } catch(convErr) {
+    showError(convErr.message || 'Gagal memproses file.');
   } finally {
-    setProcessing(false);
-    if (audioContext && audioContext.state !== 'closed') {
-      try {
-        await audioContext.close();
-      } catch (error) {
-        console.warn('AudioContext tidak dapat ditutup.', error);
-      }
-    }
+    try { await audioCtx.close(); } catch(closeErr) {}
+    convertBtn.disabled = false;
+    convertBtn.classList.remove('processing');
+    convertBtn.textContent = 'KONVERSI KE MP3';
   }
+}
+
+// ─────────────────────────────────────────────────────────
+// BATCH CONVERT — parallel workers, up to parallelCount
+// ─────────────────────────────────────────────────────────
+async function convertBatch() {
+  var files         = selectedFiles;
+  var bitrate       = parseInt(document.getElementById('bitrate').value, 10);
+  var channels      = parseInt(document.getElementById('channels').value, 10);
+  var parallelCount = Math.min(parseInt(document.getElementById('parallelCount').value, 10), files.length);
+
+  convertBtn.disabled = true;
+  convertBtn.classList.add('processing');
+  convertBtn.textContent = 'MEMPROSES BATCH (' + files.length + ' FILE)...';
+  waveformWrap.classList.add('visible');
+  resultCard.classList.remove('visible');
+  errorBox.classList.remove('visible');
+  overallProgress.classList.add('visible');
+
+  buildFileQueue(files);
+
+  var results      = new Array(files.length).fill(null);
+  var filePcts     = new Array(files.length).fill(0);
+  var completedCount = 0;
+  var startTime    = Date.now();
+
+  var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    for (var batchStart = 0; batchStart < files.length; batchStart += parallelCount) {
+      var group = files.slice(batchStart, batchStart + parallelCount);
+
+      await Promise.all(group.map(async function(file, gi) {
+        var i = batchStart + gi;
+        updateQueueItem(i, 'active', 0);
+        waveStatus.textContent = '● Encoding ' + (i + 1) + '/' + files.length + '...';
+
+        try {
+          setFileProgress(0, 'Decoding: ' + file.name);
+          var prepared = await decodeAndPrepare(file, channels, audioCtx);
+
+          var blob = await encodeViaWorker(
+            prepared.left, prepared.right,
+            prepared.nc, prepared.sampleRate, bitrate, i,
+            function(pct, eta) {
+              filePcts[i] = pct;
+              updateQueueItem(i, 'active', pct);
+              var overall = filePcts.reduce(function(a, b) { return a + b; }, 0) / files.length;
+              setOverallProgress(overall, 'FILE ' + (completedCount + 1) + '/' + files.length);
+              if (gi === 0) setFileProgress(pct, '[' + (i + 1) + '/' + files.length + '] ' + file.name, eta);
+            }
+          );
+
+          filePcts[i] = 100;
+          completedCount++;
+          updateQueueItem(i, 'done');
+          var url  = URL.createObjectURL(blob);
+          var name = file.name.replace(/\.[^/.]+$/, '') + '.mp3';
+          results[i] = { url: url, name: name, size: blob.size };
+
+        } catch(fileErr) {
+          filePcts[i] = 100;
+          completedCount++;
+          updateQueueItem(i, 'error');
+          results[i] = null;
+          console.error('[SoundRip] Error on file ' + file.name + ':', fileErr);
+        }
+      }));
+    }
+
+    var successful = results.filter(Boolean);
+    batchOutputs = successful;
+    setOverallProgress(100, 'SELESAI!');
+    setFileProgress(100, successful.length + ' file berhasil!');
+    waveStatus.textContent = '✓ Batch selesai';
+
+    resultDownloads.innerHTML = '';
+    successful.forEach(function(item) {
+      var a = document.createElement('a');
+      a.href = item.url; a.download = item.name;
+      a.className = 'btn-download-single';
+      a.textContent = '⬇ ' + item.name.substring(0, 30) + (item.name.length > 30 ? '…' : '');
+      resultDownloads.appendChild(a);
+    });
+
+    var totalMB  = (successful.reduce(function(s, r) { return s + r.size; }, 0) / 1048576).toFixed(2);
+    var elapsed  = ((Date.now() - startTime) / 1000).toFixed(1);
+    resultMeta.textContent = successful.length + '/' + files.length + ' berhasil · ' + totalMB + ' MB · ' + elapsed + 's · ' + bitrate + ' kbps';
+    downloadAllBtn.style.display = successful.length > 1 ? 'inline-flex' : 'none';
+    resultCard.classList.add('visible');
+
+  } catch(batchErr) {
+    showError(batchErr.message || 'Gagal memproses batch.');
+  } finally {
+    try { await audioCtx.close(); } catch(closeErr) {}
+    convertBtn.disabled = false;
+    convertBtn.classList.remove('processing');
+    convertBtn.textContent = 'KONVERSI KE MP3';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// DOWNLOAD ALL
+// ─────────────────────────────────────────────────────────
+downloadAllBtn.addEventListener('click', function() {
+  if (!batchOutputs.length) return;
+  downloadAllBtn.disabled = true;
+  downloadAllBtn.textContent = 'Mengunduh...';
+  batchOutputs.forEach(function(item, idx) {
+    setTimeout(function() {
+      var a = document.createElement('a');
+      a.href = item.url; a.download = item.name; a.click();
+    }, idx * 400);
+  });
+  setTimeout(function() {
+    downloadAllBtn.disabled = false;
+    downloadAllBtn.textContent = '⬇ Unduh Semua';
+  }, Math.max(1200, batchOutputs.length * 400 + 600));
 });
+
+// ─────────────────────────────────────────────────────────
+// CONVERT BUTTON
+// ─────────────────────────────────────────────────────────
+convertBtn.addEventListener('click', function() {
+  if (!selectedFiles.length) return;
+  errorBox.classList.remove('visible');
+  if (currentMode === 'single') convertSingle();
+  else convertBatch();
+});
+
+// ─────────────────────────────────────────────────────────
+// INIT — GPU detection + worker warm-up
+// ─────────────────────────────────────────────────────────
+(async function init() {
+  try {
+    gpuInfo = await detectGPU();
+  } catch(initErr) {
+    gpuInfo = { tier: 'cpu', name: 'CPU Only', hasWebGPU: false };
+  }
+
+  var tier = gpuInfo.tier;
+  gpuBadge.className = 'gpu-badge';
+
+  var noteHtml = '';
+  if (gpuInfo.hasWebGPU && gpuInfo.isIntegrated) {
+    // WebGPU aktif tapi pakai iGPU (Optimus laptop)
+    noteHtml = ' <span style="font-size:9px;opacity:.7;">(iGPU · set Chrome ke High-Performance di NVIDIA Control Panel untuk RTX)</span>';
+  }
+
+  if (tier === 'nvidia') {
+    gpuBadge.classList.add('gpu-nvidia');
+    gpuLabel.innerHTML = '🟢 NVIDIA GPU' + (gpuInfo.hasWebGPU ? ' · WebGPU AKTIF' : '') + ' — ' + gpuInfo.name + noteHtml;
+  } else if (tier === 'amd') {
+    gpuBadge.classList.add('gpu-amd');
+    gpuLabel.innerHTML = '🔴 AMD GPU' + (gpuInfo.hasWebGPU ? ' · WebGPU AKTIF' : '') + ' — ' + gpuInfo.name + noteHtml;
+  } else if (tier === 'integrated') {
+    gpuBadge.classList.add('gpu-integrated');
+    gpuLabel.innerHTML = '⚡ WebGPU AKTIF · ' + gpuInfo.name + noteHtml;
+  } else if (tier === 'webgpu') {
+    gpuBadge.classList.add('gpu-webgpu');
+    gpuLabel.innerHTML = '⚡ WebGPU AKTIF — ' + gpuInfo.name;
+  } else {
+    gpuBadge.classList.add('gpu-cpu');
+    gpuLabel.textContent = 'CPU Mode · ' + gpuInfo.name;
+  }
+
+  var useGpuCompute = gpuInfo.hasWebGPU ? 'GPU Compute + ' : '';
+  gpuThreads.textContent = useGpuCompute + MAX_WORKERS + ' CPU thread';
+
+  // Populate parallel worker options
+  var sel = document.getElementById('parallelCount');
+  sel.innerHTML = '';
+  var maxP = Math.min(MAX_WORKERS, 8);
+  for (var n = 1; n <= maxP; n++) {
+    var opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n + ' thread' + (n > 1 ? 's' : '');
+    if (n === Math.min(2, maxP)) opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  // Pre-warm worker (so first encode starts instantly)
+  try { workerUrl = createWorkerUrl(); } catch(warmErr) {
+    console.warn('[SoundRip] Worker warm-up failed:', warmErr);
+  }
+})();
 </script>
 </body>
 </html>
