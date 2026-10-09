@@ -6,8 +6,7 @@ SoundRip adalah aplikasi web statis untuk mengonversi audio dari file video ke f
 
 - Konversi lokal ke MP3 dengan pilihan bitrate 96–320 kbps.
 - Pilihan keluaran stereo atau mono.
-- Drag-and-drop, indikator kemajuan, dan waveform audio.
-- Tanpa backend, database, analitik, atau API key.
+- Mendukung Format `MP4 MKV AVI MOV WEBM FLV WMV M4V`
 
 ## Mau mengakses?
 Klik [SoundRIP Pages](https://andros38.github.io/SoundRIP/)
