@@ -20,8 +20,7 @@ atau bisa copy link dibawah ini :
 https://andros38.github.io/SoundRIP/
 ```
 
-## Mau menyimpan halaman offline di laptop tanpa harus akses?
-bisa kok, download aja file `index.html` yang ada di source code
+Mau menyimpan halaman offline di laptop tanpa harus akses? bisa kok, download aja file `index.html` yang ada di source code
 
 ## Hal yang perlu diingat!
 Web ini sepenuhnya mengandalkan spesifikasi Laptop karena proses pengkodean sepenuhnya dilakukan offline di perangkat pengguna. Jadi jika proses convertnya lambat, mungkin spesifikasi anda kurang memadai sehingga membutuhkan waktu.
