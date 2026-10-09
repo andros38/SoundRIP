@@ -3,560 +3,678 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SoundRip — Video to MP3 (Offline)</title>
+<title>SoundRIP</title>
 <style>
   :root {
-    --bg: #080a0f;
-    --surface: #0e1219;
-    --border: #1c2230;
-    --accent: #00f5c4;
-    --accent2: #ff4d6d;
-    --accent3: #7b61ff;
-    --text: #e8edf5;
-    --muted: #4a5568;
-    --glow: 0 0 30px rgba(0,245,196,0.15);
+    --bg: #090611;
+    --surface: #120d1e;
+    --surface-2: #181126;
+    --surface-3: #241836;
+    --surface-hover: #2c1d41;
+    --border: rgba(255,255,255,.09);
+    --border-strong: rgba(234,196,255,.18);
+    --accent: #b76bff;
+    --accent-hover: #ff62c0;
+    --accent-soft: rgba(183,107,255,.16);
+    --accent2: #ff62c0;
+    --accent3: #d7b7ff;
+    --text: #ffffff;
+    --muted: #b5abc8;
+    --muted-2: #8f82a8;
+    --shadow: 0 24px 80px rgba(0,0,0,.42);
   }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { color-scheme: dark; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Courier New', Courier, monospace;
     min-height: 100vh;
     overflow-x: hidden;
+    background:
+      radial-gradient(circle at 18% -8%, rgba(183,107,255,.22), transparent 28rem),
+      radial-gradient(circle at 85% 0%, rgba(255,98,192,.16), transparent 24rem),
+      linear-gradient(180deg, #11091c 0%, #090611 56%, #07040d 100%);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,245,196,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,245,196,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-  body::after {
-    content: '';
-    position: fixed;
-    top: -20%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 800px;
-    height: 600px;
-    background: radial-gradient(ellipse, rgba(0,245,196,0.04) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
+  button, select { font: inherit; }
+  button, .drop-zone, select, a { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: var(--accent); color: #000; }
+
   .container {
     position: relative;
-    z-index: 1;
-    max-width: 760px;
+    width: min(100% - 32px, 980px);
     margin: 0 auto;
-    padding: 60px 24px;
+    padding: 28px 0 48px;
   }
-  .header { text-align: center; margin-bottom: 60px; }
+
+  .header { margin-bottom: 28px; }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 72px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(183,107,255,.28);
+  }
+  .brand-mark svg { width: 18px; height: 18px; }
+  .offline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(18,18,18,.8);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+    backdrop-filter: blur(12px);
+  }
+  .offline-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(183,107,255,.12);
+  }
+
+  .hero { max-width: 760px; }
   .logo-tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 3px;
-    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 15px;
     color: var(--accent);
-    border: 1px solid rgba(0,245,196,0.3);
-    padding: 5px 14px;
-    border-radius: 2px;
-    margin-bottom: 20px;
-    background: rgba(0,245,196,0.05);
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: .04em;
+    text-transform: uppercase;
   }
   h1 {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(64px, 12vw, 110px);
-    line-height: 0.9;
-    letter-spacing: 2px;
+    max-width: 820px;
+    font-size: clamp(46px, 8vw, 82px);
+    line-height: .98;
+    letter-spacing: -.055em;
     font-weight: 900;
-    color: var(--text);
-    margin-bottom: 16px;
+    margin-bottom: 22px;
   }
-  h1 span { color: var(--accent); text-shadow: 0 0 40px rgba(0,245,196,0.4); }
-  .subtitle { font-size: 13px; color: var(--muted); letter-spacing: 1px; line-height: 1.6; }
-  .drop-zone {
-    border: 1.5px dashed var(--border);
+  h1 span { color: var(--accent); }
+  .subtitle {
+    max-width: 660px;
+    color: var(--muted);
+    font-size: clamp(15px, 2vw, 18px);
+    line-height: 1.6;
+    letter-spacing: -.01em;
+  }
+
+  .workspace {
+    margin-top: 46px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    background: linear-gradient(180deg, rgba(41,24,62,.92), rgba(17,10,28,.96));
+    box-shadow: var(--shadow);
+  }
+  .workspace-inner {
+    padding: 20px;
+    border-radius: 18px;
+    background: rgba(12,8,20,.78);
+  }
+
+  .mode-select {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+  .mode-btn {
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+  }
+  .mode-btn:hover:not(.active) { background: var(--surface-hover); color: #fff; }
+  .mode-btn.active { background: #fff; color: #000; }
+  .mode-btn:active { transform: scale(.98); }
+
+  .gpu-badge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 14px;
+    padding: 11px 13px;
+    min-height: 42px;
+    border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 60px 40px;
+    background: rgba(255,255,255,.025);
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .gpu-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+  .gpu-threads { margin-left: auto; color: var(--muted-2); white-space: nowrap; }
+  .gpu-badge.gpu-nvidia,
+  .gpu-badge.gpu-amd,
+  .gpu-badge.gpu-webgpu,
+  .gpu-badge.gpu-integrated { color: var(--accent3); border-color: rgba(183,107,255,.24); background: rgba(183,107,255,.09); }
+  .gpu-badge.gpu-cpu { color: var(--muted); }
+
+  .drop-zone {
+    position: relative;
+    overflow: hidden;
+    margin-top: 14px !important;
+    padding: clamp(40px, 7vw, 68px) 28px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 18px;
+    background: var(--surface);
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    background: var(--surface);
-    overflow: hidden;
+    transition: border-color .2s ease, background .2s ease, transform .2s ease;
   }
-  .drop-zone::before {
-    content: '';
+  .drop-zone::after {
+    content: "";
     position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at center, rgba(0,245,196,0.04) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .drop-zone:hover, .drop-zone.dragover {
-    border-color: var(--accent);
-    box-shadow: var(--glow), inset 0 0 40px rgba(0,245,196,0.03);
-  }
-  .drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
-  .drop-icon {
-    width: 64px; height: 64px;
-    margin: 0 auto 20px;
+    width: 250px;
+    height: 250px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(.7);
     border-radius: 50%;
-    background: rgba(0,245,196,0.08);
-    border: 1px solid rgba(0,245,196,0.2);
-    display: flex; align-items: center; justify-content: center;
-    transition: transform 0.3s;
+    background: rgba(183,107,255,.12);
+    filter: blur(50px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
   }
-  .drop-zone:hover .drop-icon { transform: scale(1.1); }
-  .drop-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-  .drop-sub { font-size: 12px; color: var(--muted); line-height: 1.7; }
-  .drop-formats { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: rgba(183,107,255,.75);
+    background: #161616;
+    transform: translateY(-1px);
+  }
+  .drop-zone:hover::after,
+  .drop-zone.dragover::after { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .drop-zone > * { position: relative; z-index: 1; }
+  .drop-icon {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 14px 38px rgba(183,107,255,.24);
+    transition: transform .2s ease;
+  }
+  .drop-icon svg { stroke: #fff !important; }
+  .drop-zone:hover .drop-icon { transform: scale(1.05); }
+  .drop-title { margin-bottom: 7px; font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  .drop-sub { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .drop-formats { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
   .format-badge {
-    font-size: 10px; letter-spacing: 1px;
-    padding: 3px 10px; border-radius: 3px;
-    border: 1px solid var(--border); color: var(--muted);
-    background: rgba(255,255,255,0.02);
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: #21152f;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .05em;
   }
   input[type="file"] { display: none; }
 
-  /* ── MODE TOGGLE ── */
-  .mode-select {
-    display: flex; gap: 0; margin-top: 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 4px; overflow: hidden;
-  }
-  .mode-btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 11px 16px; border: none; border-radius: 7px;
-    background: transparent; color: var(--muted);
-    font-family: 'Courier New', monospace; font-size: 12px; font-weight: 600;
-    letter-spacing: 1px; cursor: pointer; transition: all 0.25s;
-  }
-  .mode-btn.active {
-    background: rgba(0,245,196,0.12); color: var(--accent);
-    box-shadow: inset 0 0 0 1px rgba(0,245,196,0.25);
-  }
-  .mode-btn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.04); }
+  .file-info,
+  .settings,
+  .waveform-container,
+  .result-card,
+  .error-box { margin-top: 14px; }
 
-  /* ── GPU BADGE ── */
-  .gpu-badge {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; margin-top: 12px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; font-size: 11px; color: var(--muted);
-    transition: all 0.3s;
-  }
-  .gpu-badge.gpu-nvidia { border-color: rgba(118,185,0,0.35); color: #76b900; background: rgba(118,185,0,0.06); }
-  .gpu-badge.gpu-amd    { border-color: rgba(237,28,36,0.35); color: #ed1c24; background: rgba(237,28,36,0.06); }
-  .gpu-badge.gpu-webgpu { border-color: rgba(123,97,255,0.4); color: var(--accent3); background: rgba(123,97,255,0.07); }
-  .gpu-badge.gpu-integrated { border-color: rgba(0,245,196,0.2); color: var(--accent); background: rgba(0,245,196,0.05); }
-  .gpu-badge.gpu-cpu    { border-color: var(--border); color: var(--muted); }
-  .gpu-dot {
-    width: 7px; height: 7px; border-radius: 50%; background: currentColor;
-    flex-shrink: 0; animation: pulse 2s infinite;
-  }
-  .gpu-threads { margin-left: auto; font-size: 10px; opacity: 0.7; }
-
-  /* ── FILE INFO ── */
   .file-info {
     display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-top: 16px;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
   }
   .file-info.visible { display: flex; }
   .file-icon {
-    width: 44px; height: 44px; border-radius: 8px;
-    background: rgba(123,97,255,0.12); border: 1px solid rgba(123,97,255,0.3);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: linear-gradient(145deg, #34204a, #1b1128);
   }
+  .file-icon svg { stroke: var(--accent) !important; }
   .file-details { flex: 1; min-width: 0; }
-  .file-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-  .file-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 750; }
+  .file-meta { margin-top: 4px; color: var(--muted); font-size: 11px; }
   .file-remove {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    padding: 6px; border-radius: 6px; transition: all 0.2s; display: flex;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
   }
-  .file-remove:hover { color: var(--accent2); background: rgba(255,77,109,0.1); }
+  .file-remove:hover { background: var(--surface-hover); color: #fff; }
 
-  /* ── SETTINGS ── */
   .settings {
-    display: none; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 12px;
-    padding: 24px; margin-top: 16px;
+    display: none;
+    padding: 5px 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
   }
   .settings.visible { display: block; }
-  .settings-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; }
-  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .setting-row:last-child { border-bottom: none; }
-  .setting-label { font-size: 13px; color: var(--text); }
-  .setting-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .setting-control select {
-    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    color: var(--text); font-family: 'Courier New', monospace; font-size: 13px;
-    padding: 7px 12px; border-radius: 6px; cursor: pointer; outline: none; transition: border-color 0.2s;
+  .settings-title {
+    padding: 14px 0 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
   }
-  .setting-control select:focus { border-color: var(--accent); }
-  .setting-control select option { background: #0e1219; }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .setting-row:last-child { border-bottom: 0; }
+  .setting-label { font-size: 13px; font-weight: 700; }
+  .setting-desc { margin-top: 3px; color: var(--muted); font-size: 11px; }
+  .setting-control select {
+    min-width: 180px;
+    padding: 9px 34px 9px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    outline: none;
+    background: var(--surface-3);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .setting-control select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(183,107,255,.14); }
 
-  /* ── WAVEFORM + PROGRESS ── */
   .waveform-container {
-    display: none; margin-top: 16px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 12px;
-    padding: 20px; position: relative; overflow: hidden;
+    display: none;
+    overflow: hidden;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
   }
   .waveform-container.visible { display: block; }
   .waveform-label {
-    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-    margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 13px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
   }
-  .waveform-status { color: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
-  canvas#waveform { width: 100%; height: 80px; display: block; border-radius: 4px; }
+  .waveform-status { color: var(--accent); }
+  canvas#waveform { width: 100%; height: 80px; display: block; border-radius: 8px; background: #0c0813; }
 
-  /* Overall (batch) progress */
   .progress-overall {
-    display: none; margin-top: 16px;
-    padding: 12px 16px;
-    background: rgba(123,97,255,0.06);
-    border: 1px solid rgba(123,97,255,0.2);
-    border-radius: 8px;
+    display: none;
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #0f0a17;
   }
   .progress-overall.visible { display: block; }
-  .progress-overall-header {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 11px; color: var(--accent3); letter-spacing: 1px; margin-bottom: 8px;
-  }
-  .progress-overall-bar-bg {
-    width: 100%; height: 5px; background: rgba(123,97,255,0.15);
-    border-radius: 3px; overflow: hidden;
-  }
-  .progress-overall-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent3), #a78bfa);
-    border-radius: 3px; width: 0%;
-    transition: width 0.4s ease;
-    box-shadow: 0 0 8px rgba(123,97,255,0.5);
-  }
-
-  /* Per-file progress */
+  .progress-overall-header,
+  .progress-text { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .progress-overall-header { margin-bottom: 8px; color: var(--muted); font-size: 10px; font-weight: 750; }
+  .progress-overall-bar-bg,
+  .progress-bar-bg { width: 100%; overflow: hidden; border-radius: 999px; background: #332841; }
+  .progress-overall-bar-bg { height: 4px; }
+  .progress-bar-bg { height: 5px; }
+  .progress-overall-fill,
+  .progress-bar-fill,
+  .queue-mini-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9d4edd, #c05cff 55%, #e052b8); box-shadow: 0 0 14px rgba(183,107,255,.30); transition: width .18s linear; }
   .progress-wrap { margin-top: 14px; }
-  .progress-bar-bg { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent3), var(--accent));
-    border-radius: 2px; width: 0%;
-    transition: width 0.15s linear;
-    box-shadow: 0 0 10px rgba(0,245,196,0.5);
-  }
-  .progress-text { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--muted); }
-  .progress-pct { color: var(--accent); font-weight: 600; }
-  .progress-eta { font-size: 10px; color: var(--muted); margin-top: 4px; text-align: right; }
+  .progress-text { margin-top: 8px; color: var(--muted); font-size: 11px; }
+  .progress-pct { color: #fff; font-weight: 800; }
+  .progress-eta { margin-top: 4px; color: var(--muted-2); font-size: 10px; text-align: right; }
 
-  /* ── FILE QUEUE (batch) ── */
-  .file-queue {
-    display: none; margin-top: 12px;
-    max-height: 200px; overflow-y: auto;
-    border-top: 1px solid var(--border); padding-top: 12px;
-  }
+  .file-queue { display: none; max-height: 210px; margin-top: 12px; padding-top: 8px; overflow-y: auto; border-top: 1px solid var(--border); }
   .file-queue.visible { display: block; }
-  .queue-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 0; border-bottom: 1px solid rgba(28,34,48,0.6);
-    font-size: 11px;
-  }
-  .queue-item:last-child { border-bottom: none; }
-  .queue-status { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .queue-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
-  .queue-name.active { color: var(--text); }
+  .queue-item { display: flex; align-items: center; gap: 9px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .queue-item:last-child { border-bottom: 0; }
+  .queue-status { width: 16px; height: 16px; flex: 0 0 auto; display: grid; place-items: center; }
+  .queue-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .queue-name.active { color: #fff; }
   .queue-name.done { color: var(--accent); }
   .queue-name.error { color: var(--accent2); }
-  .queue-pct { font-size: 10px; color: var(--accent); font-weight: 600; min-width: 36px; text-align: right; }
-  .queue-mini-bar { width: 60px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
-  .queue-mini-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; transition: width 0.15s linear; }
-  .queue-mini-bar.done .queue-mini-fill { width: 100%; background: var(--accent); }
+  .queue-pct { width: 38px; color: var(--muted); font-size: 10px; font-weight: 700; text-align: right; }
+  .queue-mini-bar { width: 60px; height: 3px; overflow: hidden; border-radius: 999px; background: #332841; }
+  .queue-mini-bar.done .queue-mini-fill { width: 100%; }
   .queue-mini-bar.error .queue-mini-fill { width: 100%; background: var(--accent2); }
 
-  /* ── CONVERT BUTTON ── */
   .btn-convert {
-    width: 100%; margin-top: 20px; padding: 18px;
-    background: var(--accent); color: #000; border: none; border-radius: 10px;
-    font-family: Georgia, serif; font-size: 20px; font-weight: 900;
-    letter-spacing: 3px; cursor: pointer; transition: all 0.3s;
-    position: relative; overflow: hidden; text-transform: uppercase;
+    width: 100%;
+    min-height: 54px;
+    margin-top: 14px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: .01em;
+    cursor: pointer;
+    transition: background .18s ease, transform .18s ease, filter .18s ease;
   }
-  .btn-convert::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-    transform: translateX(-100%); transition: transform 0.5s;
-  }
-  .btn-convert:hover:not(:disabled)::before { transform: translateX(100%); }
-  .btn-convert:hover:not(:disabled) { box-shadow: 0 0 40px rgba(0,245,196,0.4); transform: translateY(-1px); }
-  .btn-convert:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
-  .btn-convert.processing { background: linear-gradient(90deg, var(--accent3), var(--accent)); animation: shimmer 2s linear infinite; }
-  @keyframes shimmer {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
-  }
+  .btn-convert:hover:not(:disabled) { background: var(--accent-hover); transform: scale(1.01); }
+  .btn-convert:active:not(:disabled) { transform: scale(.99); }
+  .btn-convert:disabled { background: #2c2c2c; color: #737373; cursor: not-allowed; }
+  .btn-convert.processing { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; animation: softPulse 1.35s ease-in-out infinite; }
 
-  /* ── RESULT CARD ── */
   .result-card {
-    display: none; background: rgba(0,245,196,0.04);
-    border: 1px solid rgba(0,245,196,0.25); border-radius: 12px;
-    padding: 28px 24px; margin-top: 16px; text-align: center;
+    display: none;
+    padding: 24px 18px;
+    border: 1px solid rgba(183,107,255,.24);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(183,107,255,.10), rgba(255,98,192,.035));
+    text-align: center;
   }
   .result-card.visible { display: block; }
   .result-icon {
-    width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%;
-    background: rgba(0,245,196,0.1); border: 1.5px solid rgba(0,245,196,0.4);
-    display: flex; align-items: center; justify-content: center;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 13px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
   }
-  .result-title { font-size: 18px; font-weight: 800; color: var(--accent); margin-bottom: 4px; }
-  .result-meta { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
-  .result-downloads { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
-  .btn-download {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 13px 32px; background: var(--accent); color: #000;
-    border: none; border-radius: 8px; font-size: 14px; font-weight: 700;
-    cursor: pointer; text-decoration: none; transition: all 0.3s; margin: 4px;
-  }
-  .btn-download:hover { box-shadow: 0 0 30px rgba(0,245,196,0.35); transform: translateY(-2px); }
-  .btn-download-single {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 20px; background: rgba(0,245,196,0.1); color: var(--accent);
-    border: 1px solid rgba(0,245,196,0.3); border-radius: 6px; font-size: 12px; font-weight: 600;
-    cursor: pointer; text-decoration: none; transition: all 0.2s; white-space: nowrap; max-width: 240px;
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  .btn-download-single:hover { background: rgba(0,245,196,0.18); }
+  .result-icon svg { stroke: #fff !important; }
+  .result-title { margin-bottom: 5px; font-size: 17px; font-weight: 850; }
+  .result-meta { margin-bottom: 17px; color: var(--muted); font-size: 11px; }
+  .result-downloads { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 8px; }
+  .btn-download,
+  .btn-download-single,
   .btn-new {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 13px 24px; background: transparent; color: var(--muted);
-    border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
-    font-weight: 600; cursor: pointer; transition: all 0.2s; margin: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
   }
-  .btn-new:hover { color: var(--text); border-color: var(--muted); }
+  .btn-download {
+    padding: 11px 20px;
+    border: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    font-size: 12px;
+    font-weight: 850;
+  }
+  .btn-download:hover { background: var(--accent-hover); transform: scale(1.02); }
+  .btn-download-single {
+    max-width: 250px;
+    overflow: hidden;
+    padding: 9px 14px;
+    border: 1px solid rgba(255,98,192,.24);
+    background: rgba(183,107,255,.12);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-download-single:hover { background: rgba(255,98,192,.14); }
+  .btn-new {
+    margin: 4px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .btn-new:hover { background: var(--surface-hover); }
+
   .error-box {
-    display: none; background: rgba(255,77,109,0.06);
-    border: 1px solid rgba(255,77,109,0.3); border-radius: 10px;
-    padding: 16px 20px; margin-top: 16px; font-size: 13px;
-    color: var(--accent2); line-height: 1.6;
+    display: none;
+    padding: 14px 16px;
+    border: 1px solid rgba(241,94,108,.3);
+    border-radius: 12px;
+    background: rgba(241,94,108,.08);
+    color: #ff8793;
+    font-size: 12px;
+    line-height: 1.55;
   }
   .error-box.visible { display: block; }
-  .footer { text-align: center; margin-top: 60px; font-size: 11px; color: var(--muted); letter-spacing: 1px; line-height: 2; }
-  .footer span { color: var(--accent3); }
-  .offline-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(0,245,196,0.07); border: 1px solid rgba(0,245,196,0.2);
-    border-radius: 20px; padding: 5px 14px; font-size: 11px;
-    color: var(--accent); letter-spacing: 1px; margin-bottom: 16px;
+
+  .privacy-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
   }
-  .offline-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
-  .bars-deco { display: flex; align-items: flex-end; gap: 3px; height: 24px; margin: 0 auto 20px; width: fit-content; }
-  .bars-deco span { width: 3px; background: var(--accent); border-radius: 2px; opacity: 0.6; animation: barAnim 1.2s ease-in-out infinite; }
-  .bars-deco span:nth-child(1){height:40%;animation-delay:0s}
-  .bars-deco span:nth-child(2){height:80%;animation-delay:.1s}
-  .bars-deco span:nth-child(3){height:60%;animation-delay:.2s}
-  .bars-deco span:nth-child(4){height:100%;animation-delay:.3s}
-  .bars-deco span:nth-child(5){height:70%;animation-delay:.4s}
-  .bars-deco span:nth-child(6){height:45%;animation-delay:.5s}
-  .bars-deco span:nth-child(7){height:85%;animation-delay:.35s}
-  .bars-deco span:nth-child(8){height:55%;animation-delay:.25s}
-  @keyframes barAnim { 0%,100%{transform:scaleY(.5);opacity:.4} 50%{transform:scaleY(1);opacity:1} }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spinner { animation: spin 1s linear infinite; }
+  .privacy-item {
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255,255,255,.025);
+  }
+  .privacy-item strong { display: block; margin-bottom: 3px; color: #fff; font-size: 11px; }
+  .privacy-item span { color: var(--muted-2); font-size: 10px; line-height: 1.45; }
+
+  .footer {
+    padding: 32px 4px 0;
+    color: var(--muted-2);
+    font-size: 10px;
+    line-height: 1.8;
+    text-align: center;
+  }
+  .footer span { color: var(--muted); }
+
+  @keyframes softPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+
+  @media (max-width: 700px) {
+    .container { width: min(100% - 20px, 980px); padding-top: 18px; }
+    .brand-row { margin-bottom: 52px; }
+    .offline-badge { font-size: 10px; }
+    .workspace { padding: 6px; border-radius: 20px; }
+    .workspace-inner { padding: 12px; border-radius: 15px; }
+    .mode-select { width: 100%; }
+    .mode-btn { flex: 1; min-width: 0; padding-inline: 8px; }
+    .gpu-badge { align-items: flex-start; }
+    .gpu-threads { display: none; }
+    .setting-row { align-items: flex-start; flex-direction: column; gap: 9px; }
+    .setting-control, .setting-control select { width: 100%; }
+    .privacy-strip { grid-template-columns: 1fr; }
+  }
 </style>
+
 </head>
 <body>
 <div class="container">
-  <div class="header">
-    <div class="bars-deco">
-      <span></span><span></span><span></span><span></span>
-      <span></span><span></span><span></span><span></span>
-    </div>
-    <div class="offline-badge"><span class="offline-dot"></span> OFFLINE READY</div>
-    <div class="logo-tag">⚡ Audio Extractor v3.0</div>
-    <h1>SOUND<span>RIP</span></h1>
-    <p class="subtitle">
-      Konversi video/audio menjadi MP3 berkualitas tinggi — GPU &amp; Multi-thread accelerated.<br>
-      100% offline · tidak butuh internet · tidak ada upload ke server.
-    </p>
-  </div>
-
-  <!-- MODE TOGGLE -->
-  <div class="mode-select" id="modeSelect">
-    <button class="mode-btn active" id="modeSingle" data-mode="single">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      SATU FILE
-    </button>
-    <button class="mode-btn" id="modeBatch" data-mode="batch">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
-      BATCH (SEMUA)
-    </button>
-  </div>
-
-  <!-- GPU INFO BADGE -->
-  <div class="gpu-badge gpu-cpu" id="gpuBadge">
-    <span class="gpu-dot"></span>
-    <span id="gpuLabel">🔍 Mendeteksi akselerasi GPU...</span>
-    <span class="gpu-threads" id="gpuThreads"></span>
-  </div>
-
-  <!-- DROP ZONE -->
-  <div class="drop-zone" id="dropZone" style="margin-top:16px;">
-    <input type="file" id="fileInput" accept="video/*,audio/*">
-    <div class="drop-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-      </svg>
-    </div>
-    <div class="drop-title" id="dropTitle">Seret &amp; Lepas Satu File</div>
-    <p class="drop-sub" id="dropSub">atau klik untuk memilih satu file audio/video</p>
-    <div class="drop-formats">
-      <span class="format-badge">MP4</span><span class="format-badge">MKV</span>
-      <span class="format-badge">AVI</span><span class="format-badge">MOV</span>
-      <span class="format-badge">WEBM</span><span class="format-badge">FLV</span>
-      <span class="format-badge">WMV</span><span class="format-badge">M4V</span>
-    </div>
-  </div>
-
-  <!-- FILE INFO -->
-  <div class="file-info" id="fileInfo">
-    <div class="file-icon">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent3)" stroke-width="1.5">
-        <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
-        <path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>
-      </svg>
-    </div>
-    <div class="file-details">
-      <div class="file-name" id="fileName">—</div>
-      <div class="file-meta" id="fileMeta">—</div>
-    </div>
-    <button class="file-remove" id="removeFile" title="Hapus file">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 6L6 18M6 6l12 12"/>
-      </svg>
-    </button>
-  </div>
-
-  <!-- SETTINGS -->
-  <div class="settings" id="settings">
-    <div class="settings-title">⚙ Pengaturan Output</div>
-    <div class="setting-row">
-      <div>
-        <div class="setting-label">Kualitas MP3</div>
-        <div class="setting-desc">Bitrate audio untuk file output</div>
+  <header class="header">
+    <div class="brand-row">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 4v10.2a3.8 3.8 0 1 1-2.2-3.45V7.8L19 6v7.2a3.8 3.8 0 1 1-2.2-3.45V4.6L14 4z"/>
+          </svg>
+        </span>
+        <span>SoundRIP</span>
       </div>
-      <div class="setting-control">
-        <select id="bitrate">
-          <option value="320">320 kbps — Lossless</option>
-          <option value="256">256 kbps — Sangat Tinggi</option>
-          <option value="192">192 kbps — Tinggi</option>
-          <option value="128" selected>128 kbps — Standar</option>
-          <option value="96">96 kbps — Sedang</option>
-        </select>
-      </div>
+          </div>
+
+    <div class="hero">
+      <h1>convert video ke MP3? <span>disini aja </span></h1>
+      <p class="subtitle">convert video jadi lebih mudah dengan soundRIP >_</p>
     </div>
-    <div class="setting-row">
-      <div>
-        <div class="setting-label">Channel</div>
-        <div class="setting-desc">Stereo atau Mono</div>
+  </header>
+
+  <main class="workspace">
+    <div class="workspace-inner">
+      <div class="mode-select" id="modeSelect" aria-label="Mode konversi">
+        <button class="mode-btn active" id="modeSingle" data-mode="single">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Satu file
+        </button>
+        <button class="mode-btn" id="modeBatch" data-mode="batch">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+          Batch
+        </button>
       </div>
-      <div class="setting-control">
-        <select id="channels">
-          <option value="2" selected>Stereo (2ch)</option>
-          <option value="1">Mono (1ch)</option>
-        </select>
+
+      <div class="gpu-badge gpu-cpu" id="gpuBadge">
+        <span class="gpu-dot"></span>
+        <span id="gpuLabel">Mendeteksi GPU…</span>
+        <span class="gpu-threads" id="gpuThreads"></span>
       </div>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="video/*,audio/*">
+        <div class="drop-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 15v4h14v-4"/>
+          </svg>
+        </div>
+        <div class="drop-title" id="dropTitle">Tarik file ke sini</div>
+        <p class="drop-sub" id="dropSub">atau klik untuk memilih video / audio favoritmu</p>
+        <div class="drop-formats">
+          <span class="format-badge">MP4</span><span class="format-badge">MKV</span>
+          <span class="format-badge">AVI</span><span class="format-badge">MOV</span>
+          <span class="format-badge">WEBM</span><span class="format-badge">FLV</span>
+          <span class="format-badge">WMV</span><span class="format-badge">M4V</span>
+        </div>
+      </div>
+
+      <div class="file-info" id="fileInfo">
+        <div class="file-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+        </div>
+        <div class="file-details">
+          <div class="file-name" id="fileName">—</div>
+          <div class="file-meta" id="fileMeta">—</div>
+        </div>
+        <button class="file-remove" id="removeFile" title="Hapus file" aria-label="Hapus file">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="settings" id="settings">
+        <div class="settings-title">Racik hasilnya</div>
+        <div class="setting-row">
+          <div><div class="setting-label">Kualitas MP3</div><div class="setting-desc">Pilih suara yang paling pas</div></div>
+          <div class="setting-control">
+            <select id="bitrate">
+              <option value="320">320 kbps — Max MP3</option>
+              <option value="256">256 kbps — Sangat tinggi</option>
+              <option value="192">192 kbps — Tinggi</option>
+              <option value="128" selected>128 kbps — Standar</option>
+              <option value="96">96 kbps — Hemat</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Channel</div><div class="setting-desc">MP3 standar mendukung hingga stereo</div></div>
+          <div class="setting-control"><select id="channels"><option value="2" selected>Stereo (2ch) — Max MP3</option><option value="1">Mono (1ch)</option></select></div>
+        </div>
+        <div class="setting-row" id="parallelRow" style="display:none;">
+          <div><div class="setting-label">Parallel worker</div><div class="setting-desc">Thread CPU untuk encoding simultan</div></div>
+          <div class="setting-control"><select id="parallelCount"><option value="1">1 thread</option><option value="2" selected>2 thread</option><option value="4">4 thread</option></select></div>
+        </div>
+      </div>
+
+      <div class="waveform-container" id="waveformWrap">
+        <div class="waveform-label"><span>Preview</span><span class="waveform-status" id="waveStatus">● Memproses…</span></div>
+        <canvas id="waveform" width="700" height="80"></canvas>
+        <div class="progress-overall" id="overallProgress">
+          <div class="progress-overall-header"><span id="overallLabel">PROGRES BATCH</span><span id="overallPct" style="color:var(--accent);font-weight:800;">0%</span></div>
+          <div class="progress-overall-bar-bg"><div class="progress-overall-fill" id="overallFill"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+          <div class="progress-text"><span id="progressLabel">Menyiapkan audio…</span><span class="progress-pct" id="progressPct">0%</span></div>
+          <div class="progress-eta" id="progressEta"></div>
+        </div>
+        <div class="file-queue" id="fileQueue"></div>
+      </div>
+
+      <button class="btn-convert" id="convertBtn" disabled>UBAH KE MP3</button>
+
+      <div class="result-card" id="resultCard">
+        <div class="result-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="result-title">MP3 sudah jadi.</div>
+        <div class="result-meta" id="resultMeta">Siap diputar, siap diunduh</div>
+        <div class="result-downloads" id="resultDownloads"></div>
+        <button class="btn-download" id="downloadAll" type="button" style="display:none;">⬇ Unduh Semua</button>
+        <button class="btn-new" id="newConvert">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Mulai lagi
+        </button>
+      </div>
+
+      <div class="error-box" id="errorBox"></div>
+
+
     </div>
-    <div class="setting-row" id="parallelRow" style="display:none;">
-      <div>
-        <div class="setting-label">Paralel Worker</div>
-        <div class="setting-desc">Thread CPU untuk encoding simultan</div>
-      </div>
-      <div class="setting-control">
-        <select id="parallelCount">
-          <option value="1">1 thread</option>
-          <option value="2" selected>2 thread</option>
-          <option value="4">4 thread</option>
-        </select>
-      </div>
-    </div>
-  </div>
+  </main>
 
-  <!-- WAVEFORM + PROGRESS -->
-  <div class="waveform-container" id="waveformWrap">
-    <div class="waveform-label">
-      <span>Waveform Audio</span>
-      <span class="waveform-status" id="waveStatus">● Memproses...</span>
-    </div>
-    <canvas id="waveform" width="700" height="80"></canvas>
-
-    <!-- OVERALL BATCH PROGRESS -->
-    <div class="progress-overall" id="overallProgress">
-      <div class="progress-overall-header">
-        <span id="overallLabel">BATCH PROGRESS</span>
-        <span id="overallPct" style="color:var(--accent3);font-weight:600;">0%</span>
-      </div>
-      <div class="progress-overall-bar-bg">
-        <div class="progress-overall-fill" id="overallFill"></div>
-      </div>
-    </div>
-
-    <!-- PER-FILE PROGRESS -->
-    <div class="progress-wrap">
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progressFill"></div>
-      </div>
-      <div class="progress-text">
-        <span id="progressLabel">Menganalisis audio...</span>
-        <span class="progress-pct" id="progressPct">0%</span>
-      </div>
-      <div class="progress-eta" id="progressEta"></div>
-    </div>
-
-    <!-- FILE QUEUE (batch mode) -->
-    <div class="file-queue" id="fileQueue"></div>
-  </div>
-
-  <button class="btn-convert" id="convertBtn" disabled>KONVERSI KE MP3</button>
-
-  <!-- RESULT CARD -->
-  <div class="result-card" id="resultCard">
-    <div class="result-icon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
-        <polyline points="20 6 9 17 4 12"/>
-      </svg>
-    </div>
-    <div class="result-title">Konversi Berhasil! 🎵</div>
-    <div class="result-meta" id="resultMeta">File MP3 siap diunduh</div>
-    <div class="result-downloads" id="resultDownloads"></div>
-    <button class="btn-download" id="downloadAll" type="button" style="display:none;">⬇ Unduh Semua</button>
-    <button class="btn-new" id="newConvert">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="1 4 1 10 7 10"/>
-        <path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
-      </svg>
-      Konversi Baru
-    </button>
-  </div>
-
-  <div class="error-box" id="errorBox"></div>
-
-  <div class="footer">
-    Berjalan sepenuhnya <span>offline</span> di browser Anda — privasi terjamin<br>
-    <span>Web Audio API</span> + <span>LAME MP3 Encoder</span> + <span>Web Workers</span> + <span>WebGPU Compute</span>
-  </div>
+  <footer class="footer">© Ahmad Asyhari - SoundRIP 2026</footer>
 </div>
+
 
 <!-- LAMEJS CLEAN — artifact -e dan lamejs=lamejs() sengaja dihapus -->
 <script id="lamejsBundle">
@@ -865,7 +983,7 @@ new U(9,511,w.t24HB,w.t24l),new U(11,2047,w.t24HB,w.t24l),new U(13,8191,w.t24HB,
 ia.IXMAX_VAL=8206;var sa={};sa.SFBMAX=3*c.SBMAX_s;c.ENCDELAY=576;c.POSTDELAY=1152;c.MDCTDELAY=48;c.FFTOFFSET=224+c.MDCTDELAY;c.DECDELAY=528;c.SBLIMIT=32;c.CBANDS=64;c.SBPSY_l=21;c.SBPSY_s=12;c.SBMAX_l=22;c.SBMAX_s=13;c.PSFB21=6;c.PSFB12=6;c.BLKSIZE=1024;c.HBLKSIZE=c.BLKSIZE/2+1;c.BLKSIZE_s=256;c.HBLKSIZE_s=c.BLKSIZE_s/2+1;c.NORM_TYPE=0;c.START_TYPE=1;c.SHORT_TYPE=2;c.STOP_TYPE=3;c.MPG_MD_LR_LR=0;c.MPG_MD_LR_I=1;c.MPG_MD_MS_LR=2;c.MPG_MD_MS_I=3;c.fircoef=[-.1039435,-.1892065,-.0432472*5,-.155915,3.898045E-17,
 .0467745*5,.50455,.756825,.187098*5];da.MFSIZE=3456+c.ENCDELAY-c.MDCTDELAY;da.MAX_HEADER_BUF=256;da.MAX_BITS_PER_CHANNEL=4095;da.MAX_BITS_PER_GRANULE=7680;da.BPC=320;Fa.RIFF=cc("RIFF");Fa.WAVE=cc("WAVE");Fa.fmt_=cc("fmt ");Fa.data=cc("data");Fa.readHeader=function(c){var k=new Fa,n=c.getUint32(0,!1);if(Fa.RIFF==n&&(c.getUint32(4,!0),Fa.WAVE==c.getUint32(8,!1)&&Fa.fmt_==c.getUint32(12,!1))){var u=c.getUint32(16,!0),w=20;switch(u){case 16:case 18:k.channels=c.getUint16(w+2,!0);k.sampleRate=c.getUint32(w+
 4,!0);break;default:throw"extended fmt chunk not implemented";}w+=u;u=Fa.data;for(var B=0;u!=n;){n=c.getUint32(w,!1);B=c.getUint32(w+4,!0);if(u==n)break;w+=B+8}k.dataLen=B;k.dataOffset=w+8;return k}};sa.SFBMAX=3*c.SBMAX_s;lamejs.Mp3Encoder=function(c,k,n){3!=arguments.length&&(console.error("WARN: Mp3Encoder(channels, samplerate, kbps) not specified"),c=1,k=44100,n=128);var u=new W,w=new Kc,B=new Y,G=new qa,f=new wc,b=new ia,v=new Ec,a=new zb,m=new mc,z=new Nc,e=new xc,l=new qb,d=new Lc,g=new Mc;
-u.setModules(B,G,f,b,v,a,m,z,g);G.setModules(B,g,m,a);z.setModules(G,m);f.setModules(u);v.setModules(G,e,b,l);b.setModules(l,e,u.enc.psy);e.setModules(G);l.setModules(b);a.setModules(u,G,m);w.setModules(d,g);d.setModules(m,z,f);var q=u.lame_init();q.num_channels=c;q.in_samplerate=k;q.brate=n;q.mode=la.STEREO;q.quality=3;q.bWriteVbrTag=!1;q.disable_reservoir=!0;q.write_id3tag_automatic=!1;u.lame_init_params(q);var D=1152,p=0|1.25*D+7200,r=new Int8Array(p);this.encodeBuffer=function(a,b){1==c&&(b=a);
+u.setModules(B,G,f,b,v,a,m,z,g);G.setModules(B,g,m,a);z.setModules(G,m);f.setModules(u);v.setModules(G,e,b,l);b.setModules(l,e,u.enc.psy);e.setModules(G);l.setModules(b);a.setModules(u,G,m);w.setModules(d,g);d.setModules(m,z,f);var q=u.lame_init();q.num_channels=c;q.in_samplerate=k;q.brate=n;q.mode=la.STEREO;q.quality=0;q.bWriteVbrTag=!1;q.disable_reservoir=!0;q.write_id3tag_automatic=!1;u.lame_init_params(q);var D=1152,p=0|1.25*D+7200,r=new Int8Array(p);this.encodeBuffer=function(a,b){1==c&&(b=a);
 a.length>D&&(D=a.length,p=0|1.25*D+7200,r=new Int8Array(p));a=u.lame_encode_buffer(q,a,b,a.length,r,0,p);return new Int8Array(r.subarray(0,a))};this.flush=function(){var a=u.lame_encode_flush(q,r,0,p);return new Int8Array(r.subarray(0,a))}};lamejs.WavHeader=Fa}lamejs();
 
 </script>
@@ -878,6 +996,8 @@ let batchOutputs  = [];
 let currentMode   = 'single';
 let gpuInfo       = null;
 let workerUrl     = null;
+const activeWorkers = new Set();
+let downloadTimers = [];
 const MAX_WORKERS = Math.max(1, Math.min(navigator.hardwareConcurrency || 2, 8));
 
 // ─────────────────────────────────────────────────────────
@@ -1140,15 +1260,15 @@ document.querySelectorAll('.mode-btn').forEach(function(btn) {
       fileInput.setAttribute('multiple', '');
       fileInput.setAttribute('webkitdirectory', '');
       fileInput.setAttribute('directory', '');
-      document.getElementById('dropTitle').textContent = 'Seret & Lepas Banyak File / Folder';
-      document.getElementById('dropSub').textContent   = 'atau klik untuk memilih banyak file / satu folder';
+      document.getElementById('dropTitle').textContent = 'Masukkan banyak file';
+      document.getElementById('dropSub').textContent   = 'klik untuk memilih beberapa file atau satu folder';
       parallelRow.style.display = 'flex';
     } else {
       fileInput.removeAttribute('multiple');
       fileInput.removeAttribute('webkitdirectory');
       fileInput.removeAttribute('directory');
-      document.getElementById('dropTitle').textContent = 'Seret & Lepas Satu File';
-      document.getElementById('dropSub').textContent   = 'atau klik untuk memilih satu file audio/video';
+      document.getElementById('dropTitle').textContent = 'Tarik file ke sini';
+      document.getElementById('dropSub').textContent   = 'atau klik untuk memilih satu file video / audio';
       parallelRow.style.display = 'none';
     }
   });
@@ -1203,9 +1323,49 @@ function addFiles(files) {
   waveformWrap.classList.remove('visible');
 }
 
-function resetState() {
-  selectedFiles = []; batchOutputs = [];
+function releaseOutputUrls() {
+  batchOutputs.forEach(function(item) {
+    if (item && item.url) {
+      try { URL.revokeObjectURL(item.url); } catch(urlCleanupErr) {}
+      item.url = null;
+    }
+  });
+  batchOutputs = [];
+}
+
+function cleanupSessionMemory(options) {
+  options = options || {};
+
+  // Batalkan timer download yang belum dijalankan agar tidak menahan referensi hasil.
+  downloadTimers.forEach(function(timerId) { clearTimeout(timerId); });
+  downloadTimers = [];
+
+  // Worker encoding normal selalu diterminasi saat selesai. Saat dokumen ditutup,
+  // paksa hentikan worker yang mungkin masih aktif karena halaman tidak akan dipakai lagi.
+  if (options.terminateWorkers) {
+    activeWorkers.forEach(function(worker) {
+      try { worker.terminate(); } catch(workerCleanupErr) {}
+    });
+    activeWorkers.clear();
+  }
+
+  // Lepaskan Object URL MP3 secara eksplisit. Ini yang mencegah Blob hasil
+  // konversi tetap tertahan di memori hanya karena menunggu garbage collector.
+  releaseOutputUrls();
+
+  // Lepaskan referensi File yang dipilih. File asli di perangkat tidak dihapus.
+  selectedFiles = [];
   fileInput.value = '';
+
+  // Worker script Blob bukan data media, tetapi dapat dilepas saat halaman benar-benar ditutup.
+  if (options.releaseWorkerScript && workerUrl) {
+    try { URL.revokeObjectURL(workerUrl); } catch(workerUrlCleanupErr) {}
+    workerUrl = null;
+  }
+}
+
+function resetState() {
+  cleanupSessionMemory();
   fileInfo.classList.remove('visible');
   settingsEl.classList.remove('visible');
   waveformWrap.classList.remove('visible');
@@ -1216,7 +1376,9 @@ function resetState() {
   fileQueue.innerHTML = '';
   resultDownloads.innerHTML = '';
   downloadAllBtn.style.display = 'none';
-  convertBtn.textContent = 'KONVERSI KE MP3';
+  var waveCtx = waveCanvas.getContext('2d');
+  if (waveCtx) waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+  convertBtn.textContent = 'UBAH KE MP3';
   convertBtn.classList.remove('processing');
   convertBtn.disabled = true;
   setFileProgress(0, 'Siap...');
@@ -1255,7 +1417,7 @@ function drawWaveform(data) {
   ctx.clearRect(0, 0, W, H);
   var step = Math.ceil(data.length / W);
   var mid  = H / 2;
-  ctx.strokeStyle = 'rgba(0,245,196,0.75)';
+  ctx.strokeStyle = 'rgba(183,107,255,0.92)';
   ctx.lineWidth   = 1;
   ctx.beginPath();
   for (var x = 0; x < W; x++) {
@@ -1326,27 +1488,43 @@ function encodeViaWorker(left, right, channels, sampleRate, bitrate, fileIndex, 
   return new Promise(function(resolve, reject) {
     if (!workerUrl) workerUrl = createWorkerUrl();
     var worker = new Worker(workerUrl);
+    activeWorkers.add(worker);
+
+    function disposeWorker() {
+      activeWorkers.delete(worker);
+      worker.onmessage = null;
+      worker.onerror = null;
+      try { worker.terminate(); } catch(workerTerminateErr) {}
+    }
+
     worker.onmessage = function(ev) {
       var msg = ev.data;
       if (msg.type === 'progress') {
         onProgress(msg.pct, msg.eta);
       } else if (msg.type === 'done') {
-        worker.terminate();
+        disposeWorker();
         resolve(new Blob([msg.data], { type: 'audio/mpeg' }));
       } else if (msg.type === 'error') {
-        worker.terminate();
+        disposeWorker();
         reject(new Error(msg.message));
       }
     };
     worker.onerror = function(ev) {
-      worker.terminate();
+      disposeWorker();
       reject(new Error(ev.message || 'Worker error'));
     };
-    // Transfer ownership of typed array buffers — avoids copying ~MB of PCM data
-    worker.postMessage(
-      { left: left, right: right, channels: channels, sampleRate: sampleRate, bitrate: bitrate, fileIndex: fileIndex },
-      [left.buffer, right.buffer]
-    );
+
+    try {
+      // Transfer ownership of typed array buffers — avoids copying ~MB of PCM data.
+      // Setelah ownership dipindah dan worker selesai/diterminasi, buffer PCM dapat dilepas.
+      worker.postMessage(
+        { left: left, right: right, channels: channels, sampleRate: sampleRate, bitrate: bitrate, fileIndex: fileIndex },
+        [left.buffer, right.buffer]
+      );
+    } catch(postErr) {
+      disposeWorker();
+      reject(postErr);
+    }
   });
 }
 
@@ -1383,6 +1561,7 @@ async function decodeAndPrepare(file, channels, audioCtx) {
 // SINGLE FILE CONVERT
 // ─────────────────────────────────────────────────────────
 async function convertSingle() {
+  releaseOutputUrls();
   var file     = selectedFiles[0];
   var bitrate  = parseInt(document.getElementById('bitrate').value, 10);
   var channels = parseInt(document.getElementById('channels').value, 10);
@@ -1403,7 +1582,7 @@ async function convertSingle() {
     var prepared = await decodeAndPrepare(file, channels, audioCtx);
 
     waveStatus.textContent = '● Encoding MP3 via Worker...';
-    setFileProgress(10, 'Memulai encoding...');
+    setFileProgress(10, 'Mulai mengubah ke MP3...');
 
     var blob = await encodeViaWorker(
       prepared.left, prepared.right,
@@ -1413,7 +1592,7 @@ async function convertSingle() {
       }
     );
 
-    setFileProgress(100, '✓ Selesai!');
+    setFileProgress(100, '✓ Beres!');
     waveStatus.textContent = '✓ Selesai';
 
     var url  = URL.createObjectURL(blob);
@@ -1436,7 +1615,7 @@ async function convertSingle() {
     try { await audioCtx.close(); } catch(closeErr) {}
     convertBtn.disabled = false;
     convertBtn.classList.remove('processing');
-    convertBtn.textContent = 'KONVERSI KE MP3';
+    convertBtn.textContent = 'UBAH KE MP3';
   }
 }
 
@@ -1444,6 +1623,7 @@ async function convertSingle() {
 // BATCH CONVERT — parallel workers, up to parallelCount
 // ─────────────────────────────────────────────────────────
 async function convertBatch() {
+  releaseOutputUrls();
   var files         = selectedFiles;
   var bitrate       = parseInt(document.getElementById('bitrate').value, 10);
   var channels      = parseInt(document.getElementById('channels').value, 10);
@@ -1451,7 +1631,7 @@ async function convertBatch() {
 
   convertBtn.disabled = true;
   convertBtn.classList.add('processing');
-  convertBtn.textContent = 'MEMPROSES BATCH (' + files.length + ' FILE)...';
+  convertBtn.textContent = 'MEMPROSES ' + files.length + ' FILE...';
   waveformWrap.classList.add('visible');
   resultCard.classList.remove('visible');
   errorBox.classList.remove('visible');
@@ -1509,9 +1689,9 @@ async function convertBatch() {
 
     var successful = results.filter(Boolean);
     batchOutputs = successful;
-    setOverallProgress(100, 'SELESAI!');
-    setFileProgress(100, successful.length + ' file berhasil!');
-    waveStatus.textContent = '✓ Batch selesai';
+    setOverallProgress(100, 'BERES!');
+    setFileProgress(100, successful.length + ' file siap!');
+    waveStatus.textContent = '✓ Batch beres';
 
     resultDownloads.innerHTML = '';
     successful.forEach(function(item) {
@@ -1534,7 +1714,7 @@ async function convertBatch() {
     try { await audioCtx.close(); } catch(closeErr) {}
     convertBtn.disabled = false;
     convertBtn.classList.remove('processing');
-    convertBtn.textContent = 'KONVERSI KE MP3';
+    convertBtn.textContent = 'UBAH KE MP3';
   }
 }
 
@@ -1546,15 +1726,19 @@ downloadAllBtn.addEventListener('click', function() {
   downloadAllBtn.disabled = true;
   downloadAllBtn.textContent = 'Mengunduh...';
   batchOutputs.forEach(function(item, idx) {
-    setTimeout(function() {
+    var timerId = setTimeout(function() {
+      if (!item || !item.url) return;
       var a = document.createElement('a');
       a.href = item.url; a.download = item.name; a.click();
     }, idx * 400);
+    downloadTimers.push(timerId);
   });
-  setTimeout(function() {
+  var restoreTimer = setTimeout(function() {
     downloadAllBtn.disabled = false;
     downloadAllBtn.textContent = '⬇ Unduh Semua';
+    downloadTimers = [];
   }, Math.max(1200, batchOutputs.length * 400 + 600));
+  downloadTimers.push(restoreTimer);
 });
 
 // ─────────────────────────────────────────────────────────
@@ -1565,6 +1749,12 @@ convertBtn.addEventListener('click', function() {
   errorBox.classList.remove('visible');
   if (currentMode === 'single') convertSingle();
   else convertBatch();
+});
+
+// Bersihkan URL Blob/worker script ketika dokumen benar-benar meninggalkan halaman.
+// Jika halaman masuk Back/Forward Cache, biarkan state dikelola browser agar restore tetap konsisten.
+window.addEventListener('pagehide', function(ev) {
+  if (!ev.persisted) cleanupSessionMemory({ releaseWorkerScript: true, terminateWorkers: true });
 });
 
 // ─────────────────────────────────────────────────────────
@@ -1580,31 +1770,25 @@ convertBtn.addEventListener('click', function() {
   var tier = gpuInfo.tier;
   gpuBadge.className = 'gpu-badge';
 
-  var noteHtml = '';
-  if (gpuInfo.hasWebGPU && gpuInfo.isIntegrated) {
-    // WebGPU aktif tapi pakai iGPU (Optimus laptop)
-    noteHtml = ' <span style="font-size:9px;opacity:.7;">(iGPU · set Chrome ke High-Performance di NVIDIA Control Panel untuk RTX)</span>';
-  }
 
   if (tier === 'nvidia') {
     gpuBadge.classList.add('gpu-nvidia');
-    gpuLabel.innerHTML = '🟢 NVIDIA GPU' + (gpuInfo.hasWebGPU ? ' · WebGPU AKTIF' : '') + ' — ' + gpuInfo.name + noteHtml;
+    gpuLabel.textContent = 'GPU terdeteksi: ' + gpuInfo.name;
   } else if (tier === 'amd') {
     gpuBadge.classList.add('gpu-amd');
-    gpuLabel.innerHTML = '🔴 AMD GPU' + (gpuInfo.hasWebGPU ? ' · WebGPU AKTIF' : '') + ' — ' + gpuInfo.name + noteHtml;
+    gpuLabel.textContent = 'GPU terdeteksi: ' + gpuInfo.name;
   } else if (tier === 'integrated') {
     gpuBadge.classList.add('gpu-integrated');
-    gpuLabel.innerHTML = '⚡ WebGPU AKTIF · ' + gpuInfo.name + noteHtml;
+    gpuLabel.textContent = 'GPU terdeteksi: ' + gpuInfo.name;
   } else if (tier === 'webgpu') {
     gpuBadge.classList.add('gpu-webgpu');
-    gpuLabel.innerHTML = '⚡ WebGPU AKTIF — ' + gpuInfo.name;
+    gpuLabel.textContent = 'GPU terdeteksi: ' + gpuInfo.name;
   } else {
     gpuBadge.classList.add('gpu-cpu');
-    gpuLabel.textContent = 'CPU Mode · ' + gpuInfo.name;
+    gpuLabel.textContent = 'GPU tidak terdeteksi · mode CPU';
   }
 
-  var useGpuCompute = gpuInfo.hasWebGPU ? 'GPU Compute + ' : '';
-  gpuThreads.textContent = useGpuCompute + MAX_WORKERS + ' CPU thread';
+  gpuThreads.textContent = '';
 
   // Populate parallel worker options
   var sel = document.getElementById('parallelCount');
