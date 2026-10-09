@@ -24,7 +24,3 @@ Web ini sepenuhnya mengandalkan spesifikasi Laptop karena proses pengkodean sepe
 - Processor Intel & Ryzen (Sebisa mungkin diatas Tipe U)
 - Jika memiliki Dedicated GPU akan lebih baik
 - Minimal ram sebesar 4GB-8GB
-
-## Lisensi
-
-Kode asli SoundRip dilisensikan di bawah [MIT License](LICENSE). Proyek juga memuat encoder pihak ketiga; ketentuan dan atribusinya tersedia di [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
