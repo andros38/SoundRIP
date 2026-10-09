@@ -21,9 +21,10 @@ SoundRip adalah aplikasi web statis untuk mengonversi audio dari file video atau
 
 Tidak ada proses instalasi atau dependensi.
 
-```text
+## Mau mengakses?
 [Klik untuk Membuka](https://andros38.github.io/SoundRIP/)
 atau bisa copy link dibawah ini :
+```text
 https://andros38.github.io/SoundRIP/
 ```
 
