@@ -2,6 +2,11 @@
 
 SoundRIP adalah aplikasi web statis untuk mengonversi audio dari file video ke format MP3. Seluruh proses berlangsung secara lokal di laptop anda sendiri, file tidak diunggah ke server manapun, tidak memerlukan akun, dan dapat dibuka tanpa koneksi internet setelah halaman dimuat. Jadi tenang aja, datamu tidak akan di kirim ke luar!
 
+## Gambar Website
+<p>
+  <img src="img1.png" width="300">
+</p>
+
 ## Fitur
 
 - Konversi lokal ke MP3 dengan pilihan bitrate 96–320
