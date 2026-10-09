@@ -1,4 +1,4 @@
-SoundRIP adalah aplikasi web statis untuk mengonversi audio dari file video ke format MP3. Seluruh proses berlangsung secara lokal di laptop anda sendiri, file tidak diunggah ke server manapun, tidak memerlukan akun, dan dapat dibuka tanpa koneksi internet setelah halaman dimuat.
+SoundRIP adalah aplikasi web statis untuk mengonversi audio dari file video ke format MP3. Seluruh proses berlangsung secara lokal di laptop anda sendiri, file tidak diunggah ke server manapun, tidak memerlukan akun, dan dapat dibuka tanpa koneksi internet setelah halaman dimuat. Jadi tenang aja, datamu tidak akan di kirim ke luar!
 
 ## Fitur
 
@@ -24,3 +24,6 @@ Web ini sepenuhnya mengandalkan spesifikasi Laptop karena proses pengkodean sepe
 - Processor Intel & Ryzen (Sebisa mungkin diatas Tipe U)
 - Jika memiliki Dedicated GPU akan lebih baik
 - Minimal ram sebesar 4GB-8GB
+
+## Untuk informasi lebih lanjut, bisa lihat pada file :
+[SECURITY.md](SECURITY.md) dan [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
