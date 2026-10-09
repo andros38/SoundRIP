@@ -8,7 +8,6 @@ SoundRip adalah aplikasi web statis untuk mengonversi audio dari file video ke f
 - Pilihan keluaran stereo atau mono.
 - Drag-and-drop, indikator kemajuan, dan waveform audio.
 - Tanpa backend, database, analitik, atau API key.
-- Siap dihosting di GitHub Pages karena proyek hanya memakai HTML, CSS, dan JavaScript.
 
 ## Mau mengakses?
 Klik [SoundRIP Pages](https://andros38.github.io/SoundRIP/)
@@ -17,8 +16,8 @@ atau bisa copy link dibawah ini :
 https://andros38.github.io/SoundRIP/
 ```
 
-## Mau menyimpan halaman offline di laptop?
-Download file `index.html` yang ada di source code
+## Mau menyimpan halaman offline di laptop tanpa harus akses?
+bisa kok, download aja file `index.html` yang ada di source code
 
 ## Hal yang perlu diingat!
 Web ini sepenuhnya mengandalkan spesifikasi Laptop karena proses pengkodean sepenuhnya dilakukan offline di perangkat pengguna. Jadi jika proses convertnya lambat, mungkin spesifikasi anda kurang memadai sehingga membutuhkan waktu.
